@@ -40,7 +40,6 @@ services:
       command: --interval 30
 
 # Prometheus for metrics scraping
-
   prometheus:  # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
     image: prom/prometheus
     container_name: anilist-prometheus
