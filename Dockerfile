@@ -4,14 +4,16 @@ FROM node:23.7.0-alpine
 # Set working directory in the container
 WORKDIR /usr/src/app
 
-# Install system dependencies
+# Install system dependencies and pnpm
 RUN apk add --no-cache tzdata
+RUN npm install -g pnpm
 
 # Copy package files first to leverage Docker cache
-COPY package*.json ./
+COPY pnpm-lock.yaml ./
+COPY package.json ./
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application code
 COPY . .
@@ -26,4 +28,4 @@ VOLUME ["/usr/src/app/logs"]
 EXPOSE 9090
 
 # Command to run the bot
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
