@@ -70,8 +70,9 @@ class AnimeCoverService {
             // Get animeId from the slash command's options
             // Fixed: Using getString instead of getInteger since the option is defined as STRING type
             const animeIdStr = interaction.options.getString('animeid');
-            if (!animeIdStr || isNaN(parseInt(animeIdStr))) {
-                await interaction.editReply('Please provide a valid anime ID.');
+            // Validate that input contains only digits
+            if (!animeIdStr || !/^\d+$/.test(animeIdStr)) {
+                await interaction.editReply('Please provide a valid anime ID (numbers only).');
                 return;
             }
 
