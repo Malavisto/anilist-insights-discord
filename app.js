@@ -7,6 +7,7 @@ const client = require('prom-client');
 const AnimeRecommendationService = require('./modules/animeRecommendation');
 const RandomAnimeService = require('./modules/RandomAnimeService');
 const AnimeStatsService = require('./modules/AnimeStatsService');
+const AnimeCoverService = require('./modules/AnimeCoverService');
 const metricsService = require('./metrics');
 
 const logger = require('./logger');
@@ -33,7 +34,7 @@ class AniListDiscordBot {
         this.recommendationService = new AnimeRecommendationService();
         this.randomAnimeService = new RandomAnimeService();
         this.animeStatsService = new AnimeStatsService();
-
+        this.animeCoverService = new AnimeCoverService();
 
         this.setupMetricsServer();
 
@@ -107,6 +108,10 @@ class AniListDiscordBot {
                         endTimer = metricsService.trackCommand('anime_recommend');
                         await this.recommendationService.handleAnimeRecommendCommand(interaction);
                         break;
+                    case 'animecover':
+                        endTimer = metricsService.trackCommand('anime_cover');
+                        await this.animeCoverService.handleAnimeCoverCommand(interaction);
+                        break;
                 }
                 endTimer(); // Stop the timer
             } catch (error) {
@@ -149,18 +154,29 @@ class AniListDiscordBot {
                     .setRequired(true)
             );
 
+        // Anime cover command
+        const animeCoverCommand = new SlashCommandBuilder()
+            .setName('animecover')
+            .setDescription('Get the cover image for an anime by ID')
+            .addStringOption(option =>
+                option.setName('animeid')
+                    .setDescription('AniList anime ID to fetch cover from')
+                    .setRequired(true)
+            );
+
         try {
             // Register commands for the specific guild
             await guild.commands.create(randomAnimeCommand.toJSON());
             await guild.commands.create(animeStatsCommand.toJSON());
             await guild.commands.create(animeRecommendCommand.toJSON());
+            await guild.commands.create(animeCoverCommand.toJSON());
             console.log(`Registered slash commands for guild ${guild.id}`);
         } catch (error) {
             console.error(`Failed to register slash commands for guild ${guild.id}:`, error);
         }
     }
-
 }
+
 // Usage
 function initializeBot() {
     const bot = new AniListDiscordBot(dis_token);

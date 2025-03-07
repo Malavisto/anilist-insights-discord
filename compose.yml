@@ -3,7 +3,7 @@ services:
 # Main Bot Container
   discord-bot:
     image: ghcr.io/malavisto/anilist-randomizer-discord:main
-#    build: .  #Uncomment to build image locally instead
+    build: .  #Uncomment to build image locally instead
     container_name: anilist-discord-bot
     networks:
       - services
@@ -13,8 +13,6 @@ services:
     environment:
       - TZ=$TimeZone
       - DISCORD_TOKEN=$DISCORD_TOKEN
-      - CLIENT_ID=$CLIENT_ID
-      - CLIENT_SECRET=$CLIENT_SECRET
       - METRICS_PORT=9090      
     volumes:
       - ./logs:/usr/src/app/logs
@@ -43,17 +41,17 @@ services:
 
 # Prometheus for metrics scraping
 
-prometheus:  # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
-  image: prom/prometheus
-  container_name: anilist-prometheus
-  networks:
-    - services
-  volumes:
-    - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  ports:
-    - "9091:9090"
-  depends_on:
-    - discord-bot        
+  prometheus:  # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
+    image: prom/prometheus
+    container_name: anilist-prometheus
+    networks:
+      - services
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+     - "9091:9090"
+    depends_on:
+      - discord-bot  
 
 networks:
   services:

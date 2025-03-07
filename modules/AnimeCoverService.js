@@ -29,7 +29,7 @@ class AnimeCoverService {
                 'https://graphql.anilist.co',
                 {
                     query,
-                    variables: { id: animeId }
+                    variables: { id: parseInt(animeId) }
                 },
                 {
                     headers: {
@@ -68,11 +68,14 @@ class AnimeCoverService {
             await interaction.deferReply();
 
             // Get animeId from the slash command's options
-            const animeId = interaction.options.getInteger('animeid');
-            if (!animeId) {
+            // Fixed: Using getString instead of getInteger since the option is defined as STRING type
+            const animeIdStr = interaction.options.getString('animeid');
+            if (!animeIdStr || isNaN(parseInt(animeIdStr))) {
                 await interaction.editReply('Please provide a valid anime ID.');
                 return;
             }
+
+            const animeId = parseInt(animeIdStr);
 
             // Attempt to fetch the cover
             coverImage = await this.fetchAnimeCoverById(animeId, username);
