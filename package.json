@@ -1,6 +1,6 @@
 {
   "name": "discord-anilist",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "index.js",
   "scripts": {
     "start": "node app.js"
