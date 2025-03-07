@@ -49,9 +49,9 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-     - "9091:9090"
+      - "9091:9090"
     depends_on:
-      - discord-bot  
+      - discord-bot
 
 networks:
   services:
