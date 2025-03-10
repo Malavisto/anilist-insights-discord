@@ -3,4 +3,11 @@
   "extends": [
     "config:recommended"
   ]
+  "baseBranches": ["dev"]
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    }
+  ]
 }
