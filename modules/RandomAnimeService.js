@@ -48,7 +48,8 @@ class RandomAnimeService {
     async fetchRandomAnime(username) {
         try {
             metricsService.trackApiRequest('random_anime', 'started', username);
-            const query = `
+
+            const query_ids = `
             query ($username: String) {
                 User(name: $username) {
                     id  # Validate user exists first
@@ -56,6 +57,19 @@ class RandomAnimeService {
                 MediaListCollection(userName: $username, type: ANIME) {
                     lists {
                         entries {
+                            media {
+                                id
+                            }
+
+                        }
+                    }
+                }
+            }
+            `;
+
+            const query_anime = `
+            query ($username: String, $id: Int) {
+                MediaList(userName: $username, mediaId: $id) {
                             media {
                                 id
                                 title {
@@ -78,14 +92,36 @@ class RandomAnimeService {
                             score
                         }
                     }
-                }
-            }
             `;
 
-            const response = await axios.post('https://graphql.anilist.co',
+            const response_ids = await axios.post('https://graphql.anilist.co',
                 {
-                    query,
+                    query: query_ids,
                     variables: { username }
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            const allIDs = response_ids.data.data.MediaListCollection.lists
+                .flatMap(list => list.entries.map(entry => entry.media.id));
+
+            if (allIDs.length === 0) {
+                throw new Error(`No anime found in ${username}'s list`);
+            }
+
+            const randomID = allIDs[Math.floor(Math.random() * allIDs.length)];
+
+            const id = randomID;
+
+            const response_anime = await axios.post('https://graphql.anilist.co',
+                {
+                    query: query_anime,
+                    variables: { username, id }
                 },
                 {
                     headers: {
@@ -96,18 +132,11 @@ class RandomAnimeService {
             );
             metricsService.trackApiRequest('random_anime', 'success', username);
 
-            if (!response.data.data.User) {
-                throw new Error(`User ${username} not found on AniList`);
+            if (!response_anime.data.data.MediaList) {
+                throw new Error(`No anime data found for user ${username}`);
             }
 
-            const allEntries = response.data.data.MediaListCollection.lists
-                .flatMap(list => list.entries);
-
-            if (allEntries.length === 0) {
-                throw new Error(`No anime found in ${username}'s list`);
-            }
-
-            const randomAnime = allEntries[Math.floor(Math.random() * allEntries.length)];
+            const randomAnime = response_anime.data.data.MediaList;
 
             return {
                 id: randomAnime.media.id,
