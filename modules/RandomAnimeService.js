@@ -7,7 +7,7 @@ const CacheService = require('./CacheService');
 // Main Logic
 class RandomAnimeService {
     constructor() {
-        this.cache = new CacheService();
+        this.cache = new CacheService(300000, 'RandomAnime');
     }
 
 
@@ -60,21 +60,33 @@ class RandomAnimeService {
                     }
             `;
 
-            const response_ids = await axios.post('https://graphql.anilist.co',
-                {
-                    query: query_ids,
-                    variables: { username }
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                }
-            );
+            // Check if anime IDs are cached
+            const cacheKey = `anime_ids_${username}`;
+            let allIDs = this.cache.get(cacheKey);
 
-            const allIDs = response_ids.data.data.MediaListCollection.lists
-                .flatMap(list => list.entries.map(entry => entry.media.id));
+            if (allIDs) {
+                metricsService.trackCacheHit('random_anime');
+                metricsService.trackApiRequest('random_anime', 'cache_hit', username);
+            } else {
+                const response_ids = await axios.post('https://graphql.anilist.co',
+                    {
+                        query: query_ids,
+                        variables: { username }
+                    },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                allIDs = response_ids.data.data.MediaListCollection.lists
+                    .flatMap(list => list.entries.map(entry => entry.media.id));
+
+                // Cache the IDs for future requests
+                this.cache.set(cacheKey, allIDs);
+            }
 
             if (allIDs.length === 0) {
                 throw new Error(`No anime found in ${username}'s list`);

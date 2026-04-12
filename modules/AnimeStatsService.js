@@ -7,7 +7,7 @@ const CacheService = require('./CacheService');
 // Main Logic
 class AnimeStatsService {
     constructor() {
-        this.cache = new CacheService();
+        this.cache = new CacheService(300000, 'AnimeStats');
     }
 
     async fetchUserAnimeStats(username) {
