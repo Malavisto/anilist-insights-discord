@@ -81,6 +81,10 @@ class RandomAnimeService {
                     }
                 );
 
+                if (!response_ids.data.data.User) {
+                    throw new Error(`User ${username} not found on AniList`);
+                }
+
                 allIDs = response_ids.data.data.MediaListCollection.lists
                     .flatMap(list => list.entries.map(entry => entry.media.id));
 
