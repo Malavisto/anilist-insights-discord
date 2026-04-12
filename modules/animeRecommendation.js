@@ -2,46 +2,12 @@ const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
-
-// Caching Service
-class CacheService {
-    constructor(ttl = 300000) { // 5 minutes default TTL
-        this.cache = new Map();
-        this.ttl = ttl;
-    }
-
-    set(key, value) {
-        const entry = {
-            value,
-            timestamp: Date.now()
-        };
-        this.cache.set(key, entry);
-        return value;
-    }
-
-    get(key) {
-        const entry = this.cache.get(key);
-        if (!entry) return null;
-
-        // Check if entry is expired
-        if (Date.now() - entry.timestamp > this.ttl) {
-            this.cache.delete(key);
-            return null;
-        }
-
-        return entry.value;
-    }
-
-    clear(key) {
-        this.cache.delete(key);
-    }
-}
+const CacheService = require('./CacheService');
 
 // Main Logic
 class AnimeRecommendationService {
     constructor() {
-        // Remove the accessTokenFn parameter
-        this.cache = new CacheService();
+        this.cache = new CacheService(300000, 'AnimeRecommendation');
     }
 
     async fetchAnimeRecommendation(username) {
@@ -78,8 +44,6 @@ class AnimeRecommendationService {
                 }
             }
             `;
-            // If successful, track successful API request
-            metricsService.trackApiRequest('recommendation', 'success', username);
 
             // Fetch user's media list
             const response = await axios.post('https://graphql.anilist.co',
@@ -157,6 +121,9 @@ class AnimeRecommendationService {
                     }
                 }
             );
+
+            // Track successful API request after both queries complete
+            metricsService.trackApiRequest('recommendation', 'success', username);
 
             const recommendedAnimes = recommendationResponse.data.data.Page.media;
 
