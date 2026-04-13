@@ -19,7 +19,7 @@ jobs:
         
     - name: Deploy using SSH
       id: deploy
-      uses: appleboy/ssh-action@master
+      uses: appleboy/ssh-action@v1.2.5
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
@@ -30,7 +30,7 @@ jobs:
           cd /opt/anilist-discord
           sudo systemctl stop anilist-discord
           git pull
-          npm install --production
+          npm install -g pnpm && pnpm install --prod
           sudo systemctl start anilist-discord
     - name: Notify Discord - Success
       if: success()
