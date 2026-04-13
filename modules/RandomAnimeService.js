@@ -2,53 +2,20 @@ const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
-
-// Caching Service
-class CacheService {
-    constructor(ttl = 300000) { // 5 minutes default TTL
-        this.cache = new Map();
-        this.ttl = ttl;
-    }
-
-    set(key, value) {
-        const entry = {
-            value,
-            timestamp: Date.now()
-        };
-        this.cache.set(key, entry);
-        return value;
-    }
-
-    get(key) {
-        const entry = this.cache.get(key);
-        if (!entry) return null;
-
-        // Check if entry is expired
-        if (Date.now() - entry.timestamp > this.ttl) {
-            this.cache.delete(key);
-            return null;
-        }
-
-        return entry.value;
-    }
-
-    clear(key) {
-        this.cache.delete(key);
-    }
-}
+const CacheService = require('./CacheService');
 
 // Main Logic
 class RandomAnimeService {
     constructor() {
-        // Remove the accessTokenFn parameter
-        this.cache = new CacheService();
+        this.cache = new CacheService(300000, 'RandomAnime');
     }
 
 
     async fetchRandomAnime(username) {
         try {
             metricsService.trackApiRequest('random_anime', 'started', username);
-            const query = `
+
+            const query_ids = `
             query ($username: String) {
                 User(name: $username) {
                     id  # Validate user exists first
@@ -56,6 +23,19 @@ class RandomAnimeService {
                 MediaListCollection(userName: $username, type: ANIME) {
                     lists {
                         entries {
+                            media {
+                                id
+                            }
+
+                        }
+                    }
+                }
+            }
+            `;
+
+            const query_anime = `
+            query ($username: String, $id: Int) {
+                MediaList(userName: $username, mediaId: $id) {
                             media {
                                 id
                                 title {
@@ -78,14 +58,52 @@ class RandomAnimeService {
                             score
                         }
                     }
-                }
-            }
             `;
 
-            const response = await axios.post('https://graphql.anilist.co',
+            // Check if anime IDs are cached
+            const cacheKey = `anime_ids_${username}`;
+            let allIDs = this.cache.get(cacheKey);
+
+            if (allIDs) {
+                metricsService.trackCacheHit('random_anime');
+                metricsService.trackApiRequest('random_anime', 'cache_hit', username);
+            } else {
+                const response_ids = await axios.post('https://graphql.anilist.co',
+                    {
+                        query: query_ids,
+                        variables: { username }
+                    },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response_ids.data.data.User) {
+                    throw new Error(`User ${username} not found on AniList`);
+                }
+
+                allIDs = response_ids.data.data.MediaListCollection.lists
+                    .flatMap(list => list.entries.map(entry => entry.media.id));
+
+                // Cache the IDs for future requests
+                this.cache.set(cacheKey, allIDs);
+            }
+
+            if (allIDs.length === 0) {
+                throw new Error(`No anime found in ${username}'s list`);
+            }
+
+            const randomID = allIDs[Math.floor(Math.random() * allIDs.length)];
+
+            const id = randomID;
+
+            const response_anime = await axios.post('https://graphql.anilist.co',
                 {
-                    query,
-                    variables: { username }
+                    query: query_anime,
+                    variables: { username, id }
                 },
                 {
                     headers: {
@@ -96,18 +114,11 @@ class RandomAnimeService {
             );
             metricsService.trackApiRequest('random_anime', 'success', username);
 
-            if (!response.data.data.User) {
-                throw new Error(`User ${username} not found on AniList`);
+            if (!response_anime.data.data.MediaList) {
+                throw new Error(`No anime data found for user ${username}`);
             }
 
-            const allEntries = response.data.data.MediaListCollection.lists
-                .flatMap(list => list.entries);
-
-            if (allEntries.length === 0) {
-                throw new Error(`No anime found in ${username}'s list`);
-            }
-
-            const randomAnime = allEntries[Math.floor(Math.random() * allEntries.length)];
+            const randomAnime = response_anime.data.data.MediaList;
 
             return {
                 id: randomAnime.media.id,
