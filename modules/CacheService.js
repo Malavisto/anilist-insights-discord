@@ -5,11 +5,13 @@
 const logger = require('../logger');
 
 class CacheService {
-    constructor(ttl = 300000, name = 'Default') { // 5 minutes default TTL
+    constructor(ttl = 300000, name = 'Default', sweepInterval = 60000) { // 5 minutes default TTL, 1 minute sweep interval
         this.cache = new Map();
         this.ttl = ttl;
         this.name = name;
-        
+        this.sweepInterval = sweepInterval;
+        this.sweepTimer = null;
+
         // Statistics tracking
         this.stats = {
             hits: 0,
@@ -17,6 +19,9 @@ class CacheService {
             evictions: 0,
             sets: 0
         };
+
+        // Start background sweep timer
+        this.startSweep();
     }
 
     set(key, value) {
@@ -27,6 +32,10 @@ class CacheService {
         this.cache.set(key, entry);
         this.stats.sets++;
         logger.debug(`[Cache:${this.name}] SET: ${key} (Total keys: ${this.cache.size})`);
+
+        // Opportunistic cleanup
+        this.sweepExpired();
+
         return value;
     }
 
@@ -42,9 +51,13 @@ class CacheService {
         if (Date.now() - entry.timestamp > this.ttl) {
             this.cache.delete(key);
             this.stats.evictions++;
+            this.stats.misses++;
             logger.debug(`[Cache:${this.name}] EXPIRED: ${key} (TTL: ${this.ttl}ms)`);
             return null;
         }
+
+        // Opportunistic cleanup
+        this.sweepExpired();
 
         this.stats.hits++;
         logger.debug(`[Cache:${this.name}] HIT: ${key} (Hit ratio: ${this.getHitRatio()}%)`);
@@ -98,6 +111,57 @@ class CacheService {
             size += JSON.stringify(entry.value).length;
         });
         return size;
+    }
+
+    /**
+     * Sweep expired entries from the cache
+     */
+    sweepExpired() {
+        const now = Date.now();
+        let evictedCount = 0;
+
+        for (const [key, entry] of this.cache.entries()) {
+            if (now - entry.timestamp > this.ttl) {
+                this.cache.delete(key);
+                this.stats.evictions++;
+                evictedCount++;
+            }
+        }
+
+        if (evictedCount > 0) {
+            logger.debug(`[Cache:${this.name}] SWEEP: Evicted ${evictedCount} expired entries (Remaining: ${this.cache.size})`);
+        }
+    }
+
+    /**
+     * Start the background sweep timer
+     */
+    startSweep() {
+        if (this.sweepTimer) {
+            return; // Already running
+        }
+
+        this.sweepTimer = setInterval(() => {
+            this.sweepExpired();
+        }, this.sweepInterval);
+
+        // Allow Node.js to exit even if timer is active
+        if (this.sweepTimer.unref) {
+            this.sweepTimer.unref();
+        }
+
+        logger.debug(`[Cache:${this.name}] SWEEP: Started background sweep (interval: ${this.sweepInterval}ms)`);
+    }
+
+    /**
+     * Stop the background sweep timer and cleanup
+     */
+    destroy() {
+        if (this.sweepTimer) {
+            clearInterval(this.sweepTimer);
+            this.sweepTimer = null;
+            logger.debug(`[Cache:${this.name}] SWEEP: Stopped background sweep`);
+        }
     }
 }
 

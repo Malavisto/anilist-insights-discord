@@ -122,9 +122,6 @@ class AnimeRecommendationService {
                 }
             );
 
-            // Track successful API request after both queries complete
-            metricsService.trackApiRequest('recommendation', 'success', username);
-
             const recommendedAnimes = recommendationResponse.data.data.Page.media;
 
             // Filter out anime that are already in the user's list
@@ -136,11 +133,14 @@ class AnimeRecommendationService {
                 throw new Error('No unique recommendations found');
             }
 
+            // Track successful API request after all validations complete
+            metricsService.trackApiRequest('recommendation', 'success', username);
+
             // Select a random recommendation from the available range
             const randomIndex = Math.floor(Math.random() * uniqueRecommendations.length);
             const recommendedAnime = uniqueRecommendations[randomIndex];
 
-            return {
+            const payload = {
                 id: recommendedAnime.id,
                 title: recommendedAnime.title.english || recommendedAnime.title.romaji,
                 description: recommendedAnime.description,
@@ -155,6 +155,11 @@ class AnimeRecommendationService {
                     recommendedAnime.genres.includes(genre)
                 )
             };
+
+            // Cache the result for future requests
+            this.cache.set(`recommendation_${username}`, payload);
+
+            return payload;
 
         } catch (error) {
             metricsService.trackError('recommendation_failure', 'anime_recommend');
