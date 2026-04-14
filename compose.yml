@@ -2,7 +2,7 @@
 services:
 # Main Bot Container
   discord-bot:
-    image: ghcr.io/malavisto/anilist-randomizer-discord:main
+    image: ghcr.io/malavisto/anilist-insights-discord:main
 #    build: .  #Uncomment to build image locally instead
     container_name: anilist-discord-bot
     networks:
