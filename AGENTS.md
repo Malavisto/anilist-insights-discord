@@ -1,8 +1,8 @@
 # AGENTS.md
 
-- Use `pnpm` for local work. `package.json` pins pnpm `10.14.0`, and the only repo script is `pnpm start`.
-- Start the app with `pnpm start` or `node app.js`. The README's `node start` example is not a real command.
-- `app.js` is the entrypoint. It loads `dotenv`, reads `DISCORD_TOKEN`, starts the Discord client, and serves Prometheus metrics on `METRICS_PORT` (default `9090`) at `/metrics`.
+- Use `pnpm` for local work. `package.json` pins pnpm `10.14.0` and exposes `start`, `bot:start`, `bot:stop`, `bot:status`, and `bot:attach`.
+- Start the app with `pnpm start` or `node app.js`. Use `pnpm bot:start` for a detached tmux session and `pnpm bot:stop` to send a clean shutdown signal.
+- `app.js` is the entrypoint. It loads `dotenv`, reads `DISCORD_TOKEN`, starts the Discord client, serves Prometheus metrics on `METRICS_PORT` (default `9090`) at `/metrics`, and handles `SIGINT`/`SIGTERM` for graceful shutdown.
 - `logger.js` creates `./logs` on startup and writes `info.log` and `error.log` there.
 - Slash commands are registered per guild on `ready`: `randomanime`, `animestats`, `animerecommend`, `animecover`. Keep command names, option names, and the matching handler switch in sync.
 - Command logic lives in `modules/`, one service per feature. `CacheService` is shared; caches are in-memory TTL maps and are not persistent.

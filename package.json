@@ -9,7 +9,11 @@
     "test:unit": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",
     "test:e2e": "jest --testPathPattern=e2e",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "bot:start": "bash scripts/bot.sh start",
+    "bot:stop": "bash scripts/bot.sh stop",
+    "bot:status": "bash scripts/bot.sh status",
+    "bot:attach": "bash scripts/bot.sh attach"
   },
   "keywords": [],
   "author": "",
