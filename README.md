@@ -47,7 +47,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 Start the bot by running:
 
 ```
-node start
+pnpm start
 ```
 or 
 ```
@@ -55,6 +55,17 @@ docker compose up -d
 ```
 
 The bot will log in and register the commands in all the servers it's added to.
+
+To run it in the background with tmux:
+
+```
+pnpm bot:start
+pnpm bot:stop
+pnpm bot:status
+pnpm bot:attach
+```
+
+`pnpm bot:stop` sends a clean shutdown signal so Discord sees the bot disconnect properly.
 
 ## Usage
 
@@ -99,6 +110,15 @@ Start the bot by running:
 
 ```
 pnpm start
+```
+
+Or use the tmux wrapper for background runs:
+
+```
+pnpm bot:start
+pnpm bot:stop
+pnpm bot:status
+pnpm bot:attach
 ```
 
 ## Development Notes

@@ -3,7 +3,11 @@
   "version": "1.3.0",
   "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "bot:start": "bash scripts/bot.sh start",
+    "bot:stop": "bash scripts/bot.sh stop",
+    "bot:status": "bash scripts/bot.sh status",
+    "bot:attach": "bash scripts/bot.sh attach"
   },
   "keywords": [],
   "author": "",
