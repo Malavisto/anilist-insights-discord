@@ -1,0 +1,3 @@
+services:
+  discord-bot:
+    image: ghcr.io/malavisto/anilist-randomizer-discord:v1.3.1

@@ -29,6 +29,8 @@ class AniListDiscordBot {
 
         // Discord bot token
         this.TOKEN = dis_token;
+        this.httpServer = null;
+        this.isShuttingDown = false;
 
         // Initialize services
         this.recommendationService = new AnimeRecommendationService();
@@ -39,6 +41,7 @@ class AniListDiscordBot {
         this.setupMetricsServer();
 
         this.setupEventListeners();
+        this.setupProcessHandlers();
 
         this.accessToken = null;
         this.tokenExpiresAt = 0;
@@ -62,9 +65,40 @@ class AniListDiscordBot {
                 res.status(500).send('Failed to retrieve metrics');
             }
         });
-        app.listen(PORT, () => {
+        this.httpServer = app.listen(PORT, () => {
             logger.info(`Metrics server running on port ${PORT}`);
         });
+    }
+
+    setupProcessHandlers() {
+        const shutdown = async (signal) => {
+            if (this.isShuttingDown) return;
+            this.isShuttingDown = true;
+
+            logger.info(`Received ${signal}, shutting down`);
+
+            try {
+                if (this.client.isReady()) {
+                    this.client.destroy();
+                }
+
+                if (this.httpServer) {
+                    await new Promise((resolve) => this.httpServer.close(resolve));
+                }
+
+                logger.info('Shutdown complete');
+            } catch (error) {
+                logger.error('Error during shutdown', {
+                    error: error.message,
+                    stack: error.stack
+                });
+            } finally {
+                process.exit(0);
+            }
+        };
+
+        process.on('SIGINT', () => shutdown('SIGINT'));
+        process.on('SIGTERM', () => shutdown('SIGTERM'));
     }
 
     setupEventListeners() {
