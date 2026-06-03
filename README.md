@@ -121,6 +121,28 @@ pnpm bot:status
 pnpm bot:attach
 ```
 
+### Testing
+
+This project uses [Jest](https://jestjs.io/) for automated testing.
+
+**Run tests:**
+```bash
+pnpm test                # Run all tests once
+pnpm test:watch         # Run tests in watch mode (auto-rerun on file changes)
+pnpm test:coverage      # Generate coverage reports
+```
+
+**Test Coverage:**
+- **CacheService:** 92.3% statements, 78.94% branches
+- **MetricsService:** 93.1% statements, 66.66% branches
+- **RandomAnimeService:** 86.76% statements, 70.21% branches
+
+**CI/CD Integration:**
+- Tests automatically run on every push to the `dev` branch
+- Tests automatically run on all PRs into `main`
+- Deployment to `main` only proceeds if all tests pass
+- Coverage reports are uploaded to Codecov
+
 ## Development Notes
 
 - The project uses:
