@@ -5,7 +5,7 @@ A Discord bot that connects with [AniList](https://anilist.co/) to do multiple t
 
 ## Disclaimers
 
-This project was made as an testing ground for [me](https://github.com/malavisto) to exeriment with AI, I do try to maintain the repo on my own though
+This project was made as a testing ground for [me](https://github.com/malavisto) to experiment with AI, I do try to maintain the repo on my own though
 
 **This bot is not affiliated with [Anilist](https://anilist.co) nor [Discord](https://discord.com)**
 
@@ -15,7 +15,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 
 - Fetches a random anime from an Anilist account.
 - Generates stats from an Anilist Account.
-- Generates a recomendation based on an Anilist account and fetches it.
+- Generates a recommendation based on an Anilist account and fetches it.
 - Interactive slash commands with error handling for invalid usernames or empty lists.
 - Has a built-in prometheus endpoint and decent logging.
 
@@ -73,9 +73,9 @@ pnpm bot:attach
 1. Use the `/random_anime` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
 
-### Anime Recomendations
+### Anime Recommendations
 1. Use the `/anime_recommend` command in Discord and provide your AniList username.
-2. The bot generate recomendations based on your anilist and pick one out of five anime and display its details in an embed.
+2. The bot generates recommendations based on your anilist and pick one out of five anime and display its details in an embed.
 
 ### Anime Stats
 1. Use the `/anime_stats` command in Discord and provide your AniList username.

@@ -9,5 +9,5 @@
 - **Testing:** Run `pnpm test` to execute the Jest test suite (86 tests across 3 test files). Use `pnpm test:watch` for development with auto-rerun on file changes, and `pnpm test:coverage` for coverage reports. Tests run automatically on dev pushes and PRs to main via GitHub Actions.
 - Docker builds use `pnpm install --frozen-lockfile` and run `pnpm start` in `node:23.11.1-alpine`.
 - `compose.yml` expects an external Docker network named `services`, mounts `./logs`, and exposes metrics on container port `9090`.
-- The deploy workflow on `main` runs tests first, then SSHes to the host, runs `git pull`, `npm install --production`, then restarts the `anilist-discord` systemd service. If you change startup or dependencies, check both the pnpm path and this deploy path.
+- The deploy workflow on `main` runs tests first, then SSHes to the host, runs `git pull`, `npm install -g pnpm && pnpm install --prod`, then restarts the `anilist-discord` systemd service. If you change startup or dependencies, check both the pnpm path and this deploy path.
 - Prometheus config in `prometheus/prometheus.yml` scrapes `anilist-discord-bot:9090`; if you change the metrics port or container name, update that file too.
