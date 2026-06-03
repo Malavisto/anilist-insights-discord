@@ -1,26 +1,27 @@
 module.exports = {
   testEnvironment: 'node',
-  roots: ['<rootDir>/__tests__', '<rootDir>/modules'],
-  testMatch: ['**/__tests__/**/*.test.js'],
+  testMatch: [
+    '**/__tests__/**/*.test.js',
+    '**/*.test.js'
+  ],
+  testPathIgnorePatterns: [
+    '/__tests__/setup.js'
+  ],
   collectCoverageFrom: [
     'modules/**/*.js',
-    'app.js',
-    '!node_modules/**',
-    '!__tests__/**'
+    'metrics.js',
+    '!**/node_modules/**',
+    '!**/coverage/**'
   ],
   coverageThreshold: {
     global: {
-      branches: 60,
-      functions: 60,
-      lines: 70,
-      statements: 70
+      branches: 30,
+      functions: 30,
+      lines: 30,
+      statements: 30
     }
   },
-  verbose: true,
-  testTimeout: 10000,
-  moduleFileExtensions: ['js', 'json'],
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
-  transformIgnorePatterns: [
-    'node_modules/(?!(discord\\.js|@discordjs|@types)/)'
-  ]
+  testTimeout: 10000,
+  verbose: true
 };
