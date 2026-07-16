@@ -1,6 +1,6 @@
 # AGENTS.md
 
-- Agent-authored commits must include the trailer `Co-authored-by: Codex <codex@openai.com>` to preserve an authorship trace.
+- Agent-authored commits must include a `Co-authored-by` trailer identifying the agent that made the commit (for example, `Co-authored-by: Codex <codex@openai.com>`), to preserve an authorship trace.
 - Use `pnpm` for local work. `package.json` pins pnpm `10.14.0` and exposes `start`, `bot:start`, `bot:stop`, `bot:status`, and `bot:attach`.
 - Start the app with `pnpm start` or `node app.js`. Use `pnpm bot:start` for a detached tmux session and `pnpm bot:stop` to send a clean shutdown signal.
 - `app.js` is the entrypoint. It loads `dotenv`, reads `DISCORD_TOKEN`, starts the Discord client, serves Prometheus metrics on `METRICS_PORT` (default `9090`) at `/metrics`, and handles `SIGINT`/`SIGTERM` for graceful shutdown.
