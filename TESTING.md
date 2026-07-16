@@ -44,10 +44,10 @@ pnpm test:integration
 End-to-end tests simulate complete command execution flows, verifying that all components work together to produce correct bot responses.
 
 **What's Tested:**
-- `/random_anime` command flow
-- `/anime_stats` command flow
-- `/anime_recommend` command flow
-- `/anime_cover` command flow
+- `/randomanime` command flow
+- `/animestats` command flow
+- `/animerecommend` command flow
+- `/animecover` command flow
 - Error scenarios and graceful handling
 
 **Run E2E tests:**
@@ -81,8 +81,8 @@ Coverage reports are saved to `coverage/` directory. Thresholds:
 ## Test Environment Setup
 
 ### Prerequisites
-- Node.js 18+ (tested on 18.x, 20.x, 23.x)
-- pnpm 10.14.0+
+- Node.js 23+ (tested on 23.x and 24,x)
+- pnpm 11.13.0+
 
 ### Install dependencies
 ```bash
@@ -104,15 +104,7 @@ The project includes a complete GitHub Actions workflow (`.github/workflows/test
   2. Run unit tests
   3. Run integration tests
   4. Run E2E tests
-  5. Generate coverage reports
-  6. Upload coverage to Codecov (optional)
 
-### Coverage Upload to Codecov
-
-To enable Codecov coverage tracking:
-1. Set up Codecov at https://codecov.io
-2. Add `CODECOV_TOKEN` to GitHub Secrets (repository settings)
-3. The workflow will automatically upload coverage reports
 
 ## Test Data Strategy
 

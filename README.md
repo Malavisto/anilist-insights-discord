@@ -70,15 +70,15 @@ pnpm bot:attach
 ## Usage
 
 ### Random Anime
-1. Use the `/random_anime` command in Discord and provide your AniList username.
+1. Use the `/randomanime` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
 
 ### Anime Recomendations
-1. Use the `/anime_recommend` command in Discord and provide your AniList username.
+1. Use the `/animerecommend` command in Discord and provide your AniList username.
 2. The bot generate recomendations based on your anilist and pick one out of five anime and display its details in an embed.
 
 ### Anime Stats
-1. Use the `/anime_stats` command in Discord and provide your AniList username.
+1. Use the `/animestats` command in Discord and provide your AniList username.
 2. The bot will generate stats from your AniList and display them an embed.
 
 ## Development
