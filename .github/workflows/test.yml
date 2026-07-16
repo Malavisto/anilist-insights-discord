@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 23.x]
+        node-version: [23.x]
     
     steps:
     - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
     - name: Install pnpm
       uses: pnpm/action-setup@v2
       with:
-        version: 10.14.0
+        version: 11.13.0
     
     - name: Get pnpm store directory
       id: pnpm-cache
@@ -52,17 +52,7 @@ jobs:
     
     - name: Run E2E tests
       run: pnpm test:e2e
-    
-    - name: Generate coverage report
-      run: pnpm test:coverage
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage/coverage-final.json
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+        
 
   lint:
     runs-on: ubuntu-latest

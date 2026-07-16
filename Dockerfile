@@ -10,6 +10,7 @@ RUN npm install -g pnpm
 
 # Copy package files first to leverage Docker cache
 COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
 COPY package.json ./
 
 # Install dependencies
