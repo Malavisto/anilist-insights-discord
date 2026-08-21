@@ -1,14 +1,23 @@
-# AGENTS.md
+# Repository Guide
 
-- Agent-authored commits must include a `Co-authored-by` trailer identifying the agent that made the commit (for example, `Co-authored-by: Codex <codex@openai.com>`), to preserve an authorship trace.
-- Use `pnpm` for local work. `package.json` pins pnpm `10.14.0` and exposes `start`, `bot:start`, `bot:stop`, `bot:status`, and `bot:attach`.
-- Start the app with `pnpm start` or `node app.js`. Use `pnpm bot:start` for a detached tmux session and `pnpm bot:stop` to send a clean shutdown signal.
-- `app.js` is the entrypoint. It loads `dotenv`, reads `DISCORD_TOKEN`, starts the Discord client, serves Prometheus metrics on `METRICS_PORT` (default `9090`) at `/metrics`, and handles `SIGINT`/`SIGTERM` for graceful shutdown.
-- `logger.js` creates `./logs` on startup and writes `info.log` and `error.log` there.
-- Slash commands are registered per guild on `ready`: `randomanime`, `animestats`, `animerecommend`, `animecover`. Keep command names, option names, and the matching handler switch in sync.
-- Command logic lives in `modules/`, one service per feature. `CacheService` is shared; caches are in-memory TTL maps and are not persistent.
-- There is no `test`, `lint`, or `typecheck` script in this repo. Verify changes by running the bot or the smallest path that exercises the edited module.
-- Docker builds use `pnpm install --frozen-lockfile` and run `pnpm start` in `node:23.11.1-alpine`.
-- `compose.yml` expects an external Docker network named `services`, mounts `./logs`, and exposes metrics on container port `9090`.
-- The deploy workflow on `main` SSHes to the host, runs `git pull`, `npm install --production`, then restarts the `anilist-discord` systemd service. If you change startup or dependencies, check both the pnpm path and this deploy path.
-- Prometheus config in `prometheus/prometheus.yml` scrapes `anilist-discord-bot:9090`; if you change the metrics port or container name, update that file too.
+## Runtime
+- Use `pnpm` (pinned to `11.13.0`). `pnpm start` runs the CommonJS bot entrypoint, `app.js`.
+- `DISCORD_TOKEN` is required. The in-process Express metrics endpoint serves `/metrics` on `METRICS_PORT`, defaulting to `9090`.
+- `pnpm bot:start|stop|status|attach` manages the `anilist-bot` tmux session; `stop` sends `SIGINT` and waits for the bot's graceful shutdown.
+- `logger.js` creates `logs/` and writes `info.log` and `error.log`; these are runtime artifacts, not source changes.
+
+## Application Changes
+- Command services live in `modules/`; `CacheService` is an in-memory TTL cache with a background sweep, so cached data is not persistent.
+- Slash commands are registered per guild in `app.js` when the client becomes ready. When adding or changing a command, update both `registerSlashCommands` and the `interactionCreate` switch.
+- Current commands are `randomanime`, `animestats`, and `animerecommend` with a required `username`, plus `animecover` with a required `animeid`.
+
+## Verification
+- Run `pnpm test` for the full Jest suite, or `pnpm test:unit`, `pnpm test:integration`, and `pnpm test:e2e` by tier. Focus a test with `pnpm test -- CacheService.test.js` or `-t "test name"`.
+- Tests run in Node with `__tests__/setup.js` and a 10-second timeout; AniList HTTP calls are mocked with `axios-mock-adapter`.
+- There is no local lint or typecheck script. CI's ESLint invocation is explicitly non-blocking; the three Jest tiers are the meaningful checks.
+
+## Operations
+- Docker builds from `node:krypton-alpine`, installs with `pnpm install --frozen-lockfile`, runs as `node`, mounts `logs/`, and exposes port `9090`.
+- `prometheus/prometheus.yml` targets `anilist-discord-bot:9090`; update it with metrics container or port changes.
+- Main-branch deployment uses `/opt/anilist-discord`, but `systemd/anilist-discord.service` still declares `/opt/anilist-randomizer-discord`. Reconcile both before changing deployment or service configuration.
+- Agent-authored commits must include a `Co-authored-by` trailer identifying the agent.
