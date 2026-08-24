@@ -74,6 +74,7 @@ class RandomAnimeService {
                         variables: { username }
                     },
                     {
+                        signal: AbortSignal.timeout(10000),
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json'
@@ -106,6 +107,7 @@ class RandomAnimeService {
                     variables: { username, id }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -253,9 +255,9 @@ class RandomAnimeService {
 
             // Early validation with quick response
             if (!username) {
+                // Note: visibility is fixed by deferReply above, so this posts publicly
                 await interaction.editReply({
-                    content: "❌ Please provide a valid AniList username.",
-                    ephemeral: true
+                    content: "❌ Please provide a valid AniList username."
                 });
                 return;
             }
@@ -283,8 +285,7 @@ class RandomAnimeService {
         - Invalid AniList username
         - Empty anime list
         - AniList API temporarily unavailable
-        - Network connectivity issues`,
-                    ephemeral: true
+        - Network connectivity issues`
                 });
             }
 

@@ -141,15 +141,15 @@ describe('Integration Tests - Service Interactions', () => {
               {
                 name: 'Completed',
                 entries: [
-                  { status: 'COMPLETED', media: { averageScore: 85 } },
-                  { status: 'COMPLETED', media: { averageScore: 90 } },
-                  { status: 'COMPLETED', media: { averageScore: 75 } }
+                  { status: 'COMPLETED', score: 85, media: { averageScore: 85 } },
+                  { status: 'COMPLETED', score: 90, media: { averageScore: 90 } },
+                  { status: 'COMPLETED', score: 75, media: { averageScore: 75 } }
                 ]
               },
               {
                 name: 'Watching',
                 entries: [
-                  { status: 'CURRENT', media: { averageScore: 80 } }
+                  { status: 'CURRENT', score: 80, media: { averageScore: 80 } }
                 ]
               },
               {
@@ -159,14 +159,14 @@ describe('Integration Tests - Service Interactions', () => {
               {
                 name: 'Dropped',
                 entries: [
-                  { status: 'DROPPED', media: { averageScore: 50 } }
+                  { status: 'DROPPED', score: 50, media: { averageScore: 50 } }
                 ]
               },
               {
                 name: 'Planning',
                 entries: [
-                  { status: 'PLANNING', media: { averageScore: null } },
-                  { status: 'PLANNING', media: { averageScore: 70 } }
+                  { status: 'PLANNING', score: 0, media: { averageScore: null } },
+                  { status: 'PLANNING', score: 70, media: { averageScore: 70 } }
                 ]
               }
             ]
