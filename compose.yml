@@ -33,7 +33,7 @@ services:
       restart: unless-stopped   
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-      command: --interval 30
+      command: --interval 1800  # Check for updates every 30 minutes (interval is in seconds)
 
 # Prometheus for metrics scraping
   prometheus:  # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
