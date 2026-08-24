@@ -146,12 +146,12 @@ class AniListDiscordBot {
             const handler = commandHandlers[interaction.commandName];
             if (!handler) return; // Unknown command - nothing to do
 
-            const [, methodName, metricName] = handler;
+            const [service, methodName, metricName] = handler;
             let endTimer;
             let failed = false;
             try {
                 endTimer = metricsService.trackCommand(metricName, interaction.guildId);
-                await this[methodName](interaction);
+                await service[methodName](interaction);
             } catch (error) {
                 failed = true;
                 // Errors are already logged and reported to the user by each service
