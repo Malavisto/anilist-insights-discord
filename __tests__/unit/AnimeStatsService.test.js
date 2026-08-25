@@ -42,14 +42,14 @@ describe('AnimeStatsService', () => {
               {
                 name: 'Completed',
                 entries: [
-                  { status: 'COMPLETED', media: { averageScore: 85 } },
-                  { status: 'COMPLETED', media: { averageScore: 90 } }
+                  { status: 'COMPLETED', score: 85, media: { averageScore: 85 } },
+                  { status: 'COMPLETED', score: 90, media: { averageScore: 90 } }
                 ]
               },
               {
                 name: 'Watching',
                 entries: [
-                  { status: 'CURRENT', media: { averageScore: 80 } }
+                  { status: 'CURRENT', score: 80, media: { averageScore: 80 } }
                 ]
               },
               {
@@ -63,7 +63,7 @@ describe('AnimeStatsService', () => {
               {
                 name: 'Planning',
                 entries: [
-                  { status: 'PLANNING', media: { averageScore: 75 } }
+                  { status: 'PLANNING', score: 75, media: { averageScore: 75 } }
                 ]
               }
             ]
@@ -108,7 +108,7 @@ describe('AnimeStatsService', () => {
       expect(stats.averageScore).toBe(0);
     });
 
-    test('should handle missing average scores', async () => {
+    test('should exclude unrated entries from average score', async () => {
       const username = 'testuser';
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -119,8 +119,8 @@ describe('AnimeStatsService', () => {
               {
                 name: 'Completed',
                 entries: [
-                  { status: 'COMPLETED', media: { averageScore: null } },
-                  { status: 'COMPLETED', media: { averageScore: 80 } }
+                  { status: 'COMPLETED', score: 0, media: { averageScore: null } },
+                  { status: 'COMPLETED', score: 80, media: { averageScore: 80 } }
                 ]
               },
               { name: 'Watching', entries: [] },

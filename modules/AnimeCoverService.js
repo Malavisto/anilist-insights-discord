@@ -32,6 +32,7 @@ class AnimeCoverService {
                     variables: { id: parseInt(animeId) }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                     }

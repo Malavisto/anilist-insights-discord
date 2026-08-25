@@ -52,6 +52,7 @@ class AnimeRecommendationService {
                     variables: { username }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -115,6 +116,7 @@ class AnimeRecommendationService {
                     variables: { genres: genresOfInterest }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -259,9 +261,9 @@ class AnimeRecommendationService {
             const username = interaction.options.getString('username');
 
             if (!username) {
+                // Note: visibility is fixed by deferReply above, so this posts publicly
                 await interaction.editReply({
-                    content: "❌ Please provide a valid AniList username.",
-                    ephemeral: true
+                    content: "❌ Please provide a valid AniList username."
                 });
                 return;
             }
@@ -288,8 +290,7 @@ class AnimeRecommendationService {
         - Invalid AniList username
         - No rated anime in list
         - Unable to generate recommendations
-        - AniList API temporarily unavailable`,
-                    ephemeral: true
+        - AniList API temporarily unavailable`
                 });
             }
 

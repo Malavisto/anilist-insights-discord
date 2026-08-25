@@ -1,5 +1,12 @@
+const crypto = require('crypto');
 const client = require('prom-client');
 const logger = require('./logger');
+
+// Hash user-supplied values so raw usernames never appear in metrics
+function hashLabelValue(value) {
+    if (!value) return 'unknown';
+    return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
+}
 
 class MetricsService {
     constructor() {
@@ -46,18 +53,16 @@ class MetricsService {
     }
 
     // Enhanced command tracking with status
+    // Returns an end-timer to call on completion with 'success' or 'failure';
+    // the duration histogram records the real elapsed time.
     trackCommand(commandType, guildId) {
         try {
             this.commandCounter.inc({ command_type: commandType, guild_id: guildId });
-            return (status = 'success') => {
-                const endTimer = this.commandDuration.startTimer({
-                    command_type: commandType,
-                    status
-                });
-                endTimer();
-            };
+            const endTimer = this.commandDuration.startTimer({ command_type: commandType });
+            return (status = 'success') => endTimer({ status });
         } catch (error) {
             logger.error('Error tracking command metrics', { error });
+            return () => {};
         }
     }
 
@@ -67,7 +72,7 @@ class MetricsService {
             this.apiRequestCounter.inc({
                 endpoint,
                 status,
-                username: username || 'unknown'
+                username: hashLabelValue(username)
             });
         } catch (error) {
             logger.error('Error tracking API request metrics', { error });
@@ -100,7 +105,7 @@ class MetricsService {
         try {
             this.userStatsGauge.set({
                 metric_type: metricType,
-                username
+                username: hashLabelValue(username)
             }, value);
         } catch (error) {
             logger.error('Error updating user stats metrics', { error });

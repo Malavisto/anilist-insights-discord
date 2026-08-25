@@ -1,14 +1,16 @@
 [Unit]
-Description=Anilist Discord Bot Service
+Description=AniList Discord Bot Service
 After=network.target
 
 [Service]
-Type=notify
-User=$USER
-Group=$USER
-WorkingDirectory=/opt/anilist-randomizer-discord
+# Node has no sd_notify support, so "notify" would fail the unit after a startup timeout
+Type=simple
+# Set these to the user that runs the bot (must own /opt/anilist-discord)
+#User=botuser
+#Group=botuser
+WorkingDirectory=/opt/anilist-discord
 Environment="NODE_ENV=production"
-ExecStart=npm start
+ExecStart=pnpm start
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=60
