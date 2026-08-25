@@ -19,5 +19,5 @@
 ## Operations
 - Docker builds from `node:krypton-alpine`, installs with `pnpm install --frozen-lockfile`, runs as `node`, mounts `logs/`, and exposes port `9090`.
 - `prometheus/prometheus.yml` targets `anilist-discord-bot:9090`; update it with metrics container or port changes.
-- Main-branch deployment uses `/opt/anilist-discord`, but `systemd/anilist-discord.service` still declares `/opt/anilist-randomizer-discord`. Reconcile both before changing deployment or service configuration.
+- Main-branch deployment uses `/opt/anilist-discord` consistently across `.github/workflows/deploy.yml` and `systemd/anilist-discord.service`. Keep both (and `compose.yml`) pointing at the same paths and ports when changing deployment or service configuration.
 - Agent-authored commits must include a `Co-authored-by` trailer identifying the agent.
