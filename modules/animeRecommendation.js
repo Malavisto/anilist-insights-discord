@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
 const CacheService = require('./CacheService');
@@ -8,6 +8,22 @@ const CacheService = require('./CacheService');
 class AnimeRecommendationService {
     constructor() {
         this.cache = new CacheService(300000, 'AnimeRecommendation');
+    }
+
+    // /animerecommend slash-command
+    static get commandDefinition() {
+        return {
+            builder: new SlashCommandBuilder()
+                .setName('animerecommend')
+                .setDescription('Get an anime recommendation based on your list')
+                .addStringOption(option =>
+                    option.setName('username')
+                        .setDescription('AniList username to generate recommendation from')
+                        .setRequired(true)
+                ),
+            methodName: 'handleAnimeRecommendCommand',
+            metricName: 'anime_recommendation'
+        };
     }
 
     async fetchAnimeRecommendation(username) {

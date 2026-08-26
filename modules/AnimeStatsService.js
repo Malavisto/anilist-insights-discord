@@ -1,11 +1,27 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
 const CacheService = require('./CacheService');
 
 // Main Logic
 class AnimeStatsService {
+    // /animestats slash-command
+    static get commandDefinition() {
+        return {
+            builder: new SlashCommandBuilder()
+                .setName('animestats')
+                .setDescription('Get anime stats for an AniList user')
+                .addStringOption(option =>
+                    option.setName('username')
+                        .setDescription('AniList username to fetch stats from')
+                        .setRequired(true)
+                ),
+            methodName: 'handleAnimeStatsCommand',
+            metricName: 'anime_stats'
+        };
+    }
+
     constructor() {
         this.cache = new CacheService(300000, 'AnimeStats');
     }

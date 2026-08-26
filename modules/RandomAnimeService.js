@@ -1,19 +1,34 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
 const CacheService = require('./CacheService');
 
 // Main Logic
-class RandomAnimeService {
+class RandomAnimeService {   
     constructor() {
         this.cache = new CacheService(300000, 'RandomAnime');
     }
 
+    // /animerandom slash-command
+    static get commandDefinition() {
+        return {
+            builder: new SlashCommandBuilder()
+                .setName('animerandom')
+                .setDescription('Get a random anime from a user\'s AniList')
+                .addStringOption(option =>
+                    option.setName('username')
+                        .setDescription('AniList username to fetch anime from')
+                        .setRequired(true)
+                ),
+            methodName: 'handleRandomAnimeCommand',
+            metricName: 'anime_random'
+        };
+    }
 
     async fetchRandomAnime(username) {
         try {
-            metricsService.trackApiRequest('random_anime', 'started', username);
+            metricsService.trackApiRequest('anime_random', 'started', username);
 
             const query_ids = `
             query ($username: String) {
@@ -65,8 +80,8 @@ class RandomAnimeService {
             let allIDs = this.cache.get(cacheKey);
 
             if (allIDs) {
-                metricsService.trackCacheHit('random_anime');
-                metricsService.trackApiRequest('random_anime', 'cache_hit', username);
+                metricsService.trackCacheHit('anime_random');
+                metricsService.trackApiRequest('anime_random', 'cache_hit', username);
             } else {
                 const response_ids = await axios.post('https://graphql.anilist.co',
                     {
@@ -114,7 +129,7 @@ class RandomAnimeService {
                     }
                 }
             );
-            metricsService.trackApiRequest('random_anime', 'success', username);
+            metricsService.trackApiRequest('anime_random', 'success', username);
 
             if (!response_anime.data.data.MediaList) {
                 throw new Error(`No anime data found for user ${username}`);
@@ -317,8 +332,8 @@ class RandomAnimeService {
             }
             catch (replyError) {
                 // If all else fails, log the error
-                metricsService.trackError(globalError.name || 'unknown_error', 'random_anime');
-                metricsService.trackApiRequest('random_anime', 'failure', username);
+                metricsService.trackError(globalError.name || 'unknown_error', 'anime_random');
+                metricsService.trackApiRequest('anime_random', 'failure', username);
                 logger.error('Failed to send final error message', {
                     originalError: globalError,
                     replyError

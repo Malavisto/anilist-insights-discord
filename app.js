@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
-const axios = require('axios');
 const express = require('express');
 const client = require('prom-client');
 
@@ -136,11 +135,17 @@ class AniListDiscordBot {
         this.client.on('interactionCreate', async (interaction) => {
             if (!interaction.isChatInputCommand()) return;
 
+            // Define services for command handling
+            const randomDef = RandomAnimeService.commandDefinition;
+            const statsDef = AnimeStatsService.commandDefinition;
+            const recommendationDef = AnimeRecommendationService.commandDefinition;
+            const coverDef = AnimeCoverService.commandDefinition;
+
             const commandHandlers = {
-                randomanime: [this.randomAnimeService, 'handleRandomAnimeCommand', 'random_anime'],
-                animestats: [this.animeStatsService, 'handleAnimeStatsCommand', 'anime_stats'],
-                animerecommend: [this.recommendationService, 'handleAnimeRecommendCommand', 'anime_recommend'],
-                animecover: [this.animeCoverService, 'handleAnimeCoverCommand', 'anime_cover']
+                [randomDef.builder.name]: [this.randomAnimeService, randomDef.methodName, randomDef.metricName],
+                [statsDef.builder.name]: [this.animeStatsService, statsDef.methodName, statsDef.metricName],
+                [recommendationDef.builder.name]: [this.recommendationService, recommendationDef.methodName, recommendationDef.metricName],
+                [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName]
             };
 
             const handler = commandHandlers[interaction.commandName];
@@ -172,41 +177,13 @@ class AniListDiscordBot {
     async registerSlashCommands(guild) {
         const commands = [
             // Random anime command
-            new SlashCommandBuilder()
-                .setName('randomanime')
-                .setDescription('Get a random anime from a user\'s AniList')
-                .addStringOption(option =>
-                    option.setName('username')
-                        .setDescription('AniList username to fetch anime from')
-                        .setRequired(true)
-                ),
+            RandomAnimeService.commandDefinition.builder,
             // Anime stats command
-            new SlashCommandBuilder()
-                .setName('animestats')
-                .setDescription('Get anime stats for an AniList user')
-                .addStringOption(option =>
-                    option.setName('username')
-                        .setDescription('AniList username to fetch stats from')
-                        .setRequired(true)
-                ),
+            AnimeStatsService.commandDefinition.builder,
             // Anime recommendation command
-            new SlashCommandBuilder()
-                .setName('animerecommend')
-                .setDescription('Get an anime recommendation based on your list')
-                .addStringOption(option =>
-                    option.setName('username')
-                        .setDescription('AniList username to generate recommendation from')
-                        .setRequired(true)
-                ),
+            AnimeRecommendationService.commandDefinition.builder,
             // Anime cover command
-            new SlashCommandBuilder()
-                .setName('animecover')
-                .setDescription('Get the cover image for an anime by ID')
-                .addStringOption(option =>
-                    option.setName('animeid')
-                        .setDescription('AniList anime ID to fetch cover from')
-                        .setRequired(true)
-                )
+            AnimeCoverService.commandDefinition.builder
         ];
 
         // Bulk overwrite replaces existing commands instead of duplicating them
