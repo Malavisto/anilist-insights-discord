@@ -5,11 +5,11 @@ A Discord bot that connects with [AniList](https://anilist.co/) to do multiple t
 
 ## Disclaimers
 
-This project was made as an testing ground for [me](https://github.com/malavisto) to exeriment with AI, I do try to maintain the repo on my own though
+This project was made as an testing ground for [me](https://github.com/malavisto) to experiment with AI, I do try to maintain the repo on my own though
 
 **This bot is not affiliated with [Anilist](https://anilist.co) nor [Discord](https://discord.com)**
 
-**Some parts of this repo are AI-Generated**
+**Most parts of this repo are AI-Generated**
 
 ## Features
 
