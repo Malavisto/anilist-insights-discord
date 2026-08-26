@@ -70,7 +70,7 @@ pnpm bot:attach
 ## Usage
 
 ### Random Anime
-1. Use the `/randomanime` command in Discord and provide your AniList username.
+1. Use the `/animerandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
 
 ### Anime Recomendations

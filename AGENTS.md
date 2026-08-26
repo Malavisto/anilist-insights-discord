@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project Overview
 
-A Discord bot (discord.js v14) that answers `/randomanime`, `/animestats`, `/animerecommend`, and `/animecover` slash commands by querying the AniList GraphQL API. Plain CommonJS Node.js (23+) with no build step or TypeScript; package manager is pnpm, pinned via `packageManager`.
+A Discord bot (discord.js v14) that answers `/animerandom`, `/animestats`, `/animerecommend`, and `/animecover` slash commands by querying the AniList GraphQL API. Plain CommonJS Node.js (23+) with no build step or TypeScript; package manager is pnpm, pinned via `packageManager`.
 
 ## Commands
 

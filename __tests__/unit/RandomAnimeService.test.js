@@ -232,7 +232,7 @@ describe('RandomAnimeService', () => {
       }
 
       expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'random_anime',
+        'anime_random',
         'started',
         username
       );

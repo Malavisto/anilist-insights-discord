@@ -31,7 +31,7 @@ describe('E2E Tests - Command Interactions', () => {
     mockAdapter.reset();
   });
 
-  describe('/random_anime command', () => {
+  describe('/animerandom command', () => {
     test('should execute random anime command successfully', async () => {
       const service = new RandomAnimeService();
       const username = 'testuser';
@@ -467,7 +467,7 @@ describe('E2E Tests - Command Interactions', () => {
 
       // Verify tracking
       expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'random_anime',
+        'anime_random',
         'started',
         username
       );

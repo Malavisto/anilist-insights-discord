@@ -32,7 +32,7 @@ they affect runtime behavior or operations.
 - For changes to `app.js`, verify every slash command is updated consistently
   in both `registerSlashCommands` and the `interactionCreate` dispatch switch.
 - Verify required command options remain aligned with the documented commands:
-  `randomanime`, `animestats`, and `animerecommend` require `username`; `animecover`
+  `animerandom`, `animestats`, and `animerecommend` require `username`; `animecover`
   requires `animeid`.
 - Check Discord interactions are acknowledged exactly once and within Discord's
   response window, including success, empty-result, validation, and exception

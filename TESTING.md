@@ -44,7 +44,7 @@ pnpm test:integration
 End-to-end tests simulate complete command execution flows, verifying that all components work together to produce correct bot responses.
 
 **What's Tested:**
-- `/randomanime` command flow
+- `/animerandom` command flow
 - `/animestats` command flow
 - `/animerecommend` command flow
 - `/animecover` command flow
