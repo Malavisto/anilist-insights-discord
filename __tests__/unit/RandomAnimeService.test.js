@@ -387,6 +387,23 @@ describe('RandomAnimeService', () => {
         ephemeral: true
       });
     });
+
+    test('logs and stays silent when every response path fails', async () => {
+      const metrics = require('../../metrics');
+      const logger = require('../../logger');
+      const interaction = createMockInteraction({
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
+        reply: jest.fn().mockRejectedValue(new Error('cannot reply'))
+      });
+
+      await expect(service.handleRandomAnimeCommand(interaction)).resolves.toBeUndefined();
+
+      expect(metrics.trackError).toHaveBeenCalledWith('Error', 'anime_random');
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to send final error message',
+        expect.any(Object)
+      );
+    });
   });
 
   describe('createAnimeEmbed', () => {
