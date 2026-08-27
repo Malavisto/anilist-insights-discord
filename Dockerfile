@@ -7,7 +7,10 @@ WORKDIR /usr/src/app
 # Install system dependencies and pnpm
 RUN apk add --no-cache tzdata
 COPY package.json ./
-RUN corepack install
+
+# Shared cache so pnpm is reused
+ENV COREPACK_HOME=/usr/local/share/.corepack
+RUN corepack enable && corepack install
 
 # Copy package files first to leverage Docker cache
 COPY pnpm-lock.yaml ./
