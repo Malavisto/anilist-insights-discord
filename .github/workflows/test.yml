@@ -54,7 +54,9 @@ jobs:
     
     - name: Run E2E tests
       run: pnpm test:e2e
-        
+
+    - name: Run tests with coverage (enforces jest.config.js thresholds)
+      run: pnpm test:coverage
 
   lint:
     runs-on: ubuntu-latest
