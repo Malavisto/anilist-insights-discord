@@ -1,11 +1,28 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 // Use same logger and metricsService pattern as in other modules
 const logger = require('../logger');
 const metricsService = require('../metrics');
 
 class AnimeCoverService {
+
+    // /animecover slash-command
+    static get commandDefinition() {
+        return {
+            builder: new SlashCommandBuilder()
+                .setName('animecover')
+                .setDescription('Get the cover image for an anime by ID')
+                .addStringOption(option =>
+                    option.setName('animeid')
+                        .setDescription('AniList anime ID to fetch cover from')
+                        .setRequired(true)
+                ),
+            methodName: 'handleAnimeCoverCommand',
+            metricName: 'anime_cover'
+        };
+    }
+
     /**
      * Fetch a high-quality anime cover image by ID from AniList.
      * Returns the extraLarge cover image URL or null if not found.
@@ -32,6 +49,7 @@ class AnimeCoverService {
                     variables: { id: parseInt(animeId) }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                     }

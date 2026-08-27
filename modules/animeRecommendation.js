@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
 const CacheService = require('./CacheService');
@@ -8,6 +8,22 @@ const CacheService = require('./CacheService');
 class AnimeRecommendationService {
     constructor() {
         this.cache = new CacheService(300000, 'AnimeRecommendation');
+    }
+
+    // /animerecommend slash-command
+    static get commandDefinition() {
+        return {
+            builder: new SlashCommandBuilder()
+                .setName('animerecommend')
+                .setDescription('Get an anime recommendation based on your list')
+                .addStringOption(option =>
+                    option.setName('username')
+                        .setDescription('AniList username to generate recommendation from')
+                        .setRequired(true)
+                ),
+            methodName: 'handleAnimeRecommendCommand',
+            metricName: 'anime_recommendation'
+        };
     }
 
     async fetchAnimeRecommendation(username) {
@@ -52,6 +68,7 @@ class AnimeRecommendationService {
                     variables: { username }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -115,6 +132,7 @@ class AnimeRecommendationService {
                     variables: { genres: genresOfInterest }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -259,9 +277,9 @@ class AnimeRecommendationService {
             const username = interaction.options.getString('username');
 
             if (!username) {
+                // Note: visibility is fixed by deferReply above, so this posts publicly
                 await interaction.editReply({
-                    content: "❌ Please provide a valid AniList username.",
-                    ephemeral: true
+                    content: "❌ Please provide a valid AniList username."
                 });
                 return;
             }
@@ -288,8 +306,7 @@ class AnimeRecommendationService {
         - Invalid AniList username
         - No rated anime in list
         - Unable to generate recommendations
-        - AniList API temporarily unavailable`,
-                    ephemeral: true
+        - AniList API temporarily unavailable`
                 });
             }
 

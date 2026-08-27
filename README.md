@@ -5,17 +5,17 @@ A Discord bot that connects with [AniList](https://anilist.co/) to do multiple t
 
 ## Disclaimers
 
-This project was made as a testing ground for [me](https://github.com/malavisto) to experiment with AI, I do try to maintain the repo on my own though
+This project was made as an testing ground for [me](https://github.com/malavisto) to experiment with AI, I do try to maintain the repo on my own though
 
 **This bot is not affiliated with [Anilist](https://anilist.co) nor [Discord](https://discord.com)**
 
-**Some parts of this repo are AI-Generated**
+**Most parts of this repo are AI-Generated**
 
 ## Features
 
 - Fetches a random anime from an Anilist account.
 - Generates stats from an Anilist Account.
-- Generates a recommendation based on an Anilist account and fetches it.
+- Generates a recomendation based on an Anilist account and fetches it.
 - Interactive slash commands with error handling for invalid usernames or empty lists.
 - Has a built-in prometheus endpoint and decent logging.
 
@@ -70,15 +70,15 @@ pnpm bot:attach
 ## Usage
 
 ### Random Anime
-1. Use the `/random_anime` command in Discord and provide your AniList username.
+1. Use the `/animerandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
 
-### Anime Recommendations
-1. Use the `/anime_recommend` command in Discord and provide your AniList username.
-2. The bot generates recommendations based on your anilist and pick one out of five anime and display its details in an embed.
+### Anime Recomendations
+1. Use the `/animerecommend` command in Discord and provide your AniList username.
+2. The bot generate recomendations based on your anilist and pick one out of five anime and display its details in an embed.
 
 ### Anime Stats
-1. Use the `/anime_stats` command in Discord and provide your AniList username.
+1. Use the `/animestats` command in Discord and provide your AniList username.
 2. The bot will generate stats from your AniList and display them an embed.
 
 ## Development
@@ -120,28 +120,6 @@ pnpm bot:stop
 pnpm bot:status
 pnpm bot:attach
 ```
-
-### Testing
-
-This project uses [Jest](https://jestjs.io/) for automated testing.
-
-**Run tests:**
-```bash
-pnpm test                # Run all tests once
-pnpm test:watch         # Run tests in watch mode (auto-rerun on file changes)
-pnpm test:coverage      # Generate coverage reports
-```
-
-**Test Coverage:**
-- **CacheService:** 92.3% statements, 78.94% branches
-- **MetricsService:** 93.1% statements, 66.66% branches
-- **RandomAnimeService:** 86.76% statements, 70.21% branches
-
-**CI/CD Integration:**
-- Tests automatically run on every push to the `dev` branch
-- Tests automatically run on all PRs into `main`
-- Deployment to `main` only proceeds if all tests pass
-- Coverage reports are uploaded to Codecov
 
 ## Development Notes
 

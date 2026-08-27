@@ -2,11 +2,8 @@
 services:
 # Main Bot Container
   discord-bot:
-    image: ghcr.io/malavisto/anilist-randomizer-discord:main
-#    build: .  #Uncomment to build image locally instead
+    image: ghcr.io/malavisto/anilist-insights-discord:main
     container_name: anilist-discord-bot
-    networks:
-      - services
     restart: unless-stopped
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -32,19 +29,15 @@ services:
         - TZ=$TimeZone
         - WATCHTOWER_CLEANUP=true
         - WATCHTOWER_LABEL_ENABLE=true
-      restart: unless-stopped  
-      networks:
-        - services  
+      restart: unless-stopped   
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-      command: --interval 30
+      command: --interval 1800  # Check for updates every 30 minutes (interval is in seconds)
 
 # Prometheus for metrics scraping
   prometheus:  # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
     image: prom/prometheus
     container_name: anilist-prometheus
-    networks:
-      - services
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -52,6 +45,3 @@ services:
     depends_on:
       - discord-bot
 
-networks:
-  services:
-    external: true

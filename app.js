@@ -1,5 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
-const axios = require('axios');
+const { Client, GatewayIntentBits} = require('discord.js');
 const express = require('express');
 const client = require('prom-client');
 
@@ -99,6 +98,14 @@ class AniListDiscordBot {
 
         process.on('SIGINT', () => shutdown('SIGINT'));
         process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+        // Log stray promise rejections instead of letting them crash the process
+        process.on('unhandledRejection', (reason) => {
+            logger.error('Unhandled promise rejection', {
+                error: reason instanceof Error ? reason.message : String(reason),
+                stack: reason instanceof Error ? reason.stack : undefined
+            });
+        });
     }
 
     setupEventListeners() {
@@ -107,15 +114,16 @@ class AniListDiscordBot {
             logger.info(`Logged in as ${this.client.user.tag}`);
 
             // Get all guilds the bot is in and register commands
-            const guilds = this.client.guilds.cache;
-            guilds.forEach(async (guild) => {
+            for (const guild of this.client.guilds.cache.values()) {
                 try {
                     await this.registerSlashCommands(guild);
-                    logger.info(`Registered commands for guild ${guild.id}`);
                 } catch (error) {
-                    logger.error(`Failed to register commands for guild ${guild.id}:`, error);
+                    logger.error(`Failed to register commands for guild ${guild.id}`, {
+                        error: error.message,
+                        stack: error.stack
+                    });
                 }
-            });
+            }
         });
 
         // Error handling
@@ -127,30 +135,39 @@ class AniListDiscordBot {
         this.client.on('interactionCreate', async (interaction) => {
             if (!interaction.isChatInputCommand()) return;
 
+            // Define services for command handling
+            const randomDef = RandomAnimeService.commandDefinition;
+            const statsDef = AnimeStatsService.commandDefinition;
+            const recommendationDef = AnimeRecommendationService.commandDefinition;
+            const coverDef = AnimeCoverService.commandDefinition;
+
+            const commandHandlers = {
+                [randomDef.builder.name]: [this.randomAnimeService, randomDef.methodName, randomDef.metricName],
+                [statsDef.builder.name]: [this.animeStatsService, statsDef.methodName, statsDef.metricName],
+                [recommendationDef.builder.name]: [this.recommendationService, recommendationDef.methodName, recommendationDef.metricName],
+                [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName]
+            };
+
+            const handler = commandHandlers[interaction.commandName];
+            if (!handler) return; // Unknown command - nothing to do
+
+            const [service, methodName, metricName] = handler;
             let endTimer;
+            let failed = false;
             try {
-                switch (interaction.commandName) {
-                    case 'randomanime':
-                        endTimer = metricsService.trackCommand('random_anime');
-                        await this.randomAnimeService.handleRandomAnimeCommand(interaction);
-                        break;
-                    case 'animestats':
-                        endTimer = metricsService.trackCommand('anime_stats');
-                        await this.animeStatsService.handleAnimeStatsCommand(interaction);
-                        break;
-                    case 'animerecommend':
-                        endTimer = metricsService.trackCommand('anime_recommend');
-                        await this.recommendationService.handleAnimeRecommendCommand(interaction);
-                        break;
-                    case 'animecover':
-                        endTimer = metricsService.trackCommand('anime_cover');
-                        await this.animeCoverService.handleAnimeCoverCommand(interaction);
-                        break;
-                }
-                endTimer(); // Stop the timer
+                endTimer = metricsService.trackCommand(metricName, interaction.guildId);
+                await service[methodName](interaction);
             } catch (error) {
-                if (endTimer) endTimer(); // Ensure timer is stopped
-                throw error;
+                failed = true;
+                // Errors are already logged and reported to the user by each service
+                logger.error(`Unhandled error from /${interaction.commandName}`, {
+                    error: error.message,
+                    stack: error.stack
+                });
+            } finally {
+                if (typeof endTimer === 'function') {
+                    endTimer(failed ? 'failure' : 'success');
+                }
             }
         });
         // Login to Discord
@@ -158,56 +175,20 @@ class AniListDiscordBot {
     }
 
     async registerSlashCommands(guild) {
-        // Random anime command
-        const randomAnimeCommand = new SlashCommandBuilder()
-            .setName('randomanime')
-            .setDescription('Get a random anime from a user\'s AniList')
-            .addStringOption(option =>
-                option.setName('username')
-                    .setDescription('AniList username to fetch anime from')
-                    .setRequired(true)
-            );
+        const commands = [
+            // Random anime command
+            RandomAnimeService.commandDefinition.builder,
+            // Anime stats command
+            AnimeStatsService.commandDefinition.builder,
+            // Anime recommendation command
+            AnimeRecommendationService.commandDefinition.builder,
+            // Anime cover command
+            AnimeCoverService.commandDefinition.builder
+        ];
 
-        // Anime stats command
-        const animeStatsCommand = new SlashCommandBuilder()
-            .setName('animestats')
-            .setDescription('Get anime stats for an AniList user')
-            .addStringOption(option =>
-                option.setName('username')
-                    .setDescription('AniList username to fetch stats from')
-                    .setRequired(true)
-            );
-
-        // Anime recommendation command
-        const animeRecommendCommand = new SlashCommandBuilder()
-            .setName('animerecommend')
-            .setDescription('Get an anime recommendation based on your list')
-            .addStringOption(option =>
-                option.setName('username')
-                    .setDescription('AniList username to generate recommendation from')
-                    .setRequired(true)
-            );
-
-        // Anime cover command
-        const animeCoverCommand = new SlashCommandBuilder()
-            .setName('animecover')
-            .setDescription('Get the cover image for an anime by ID')
-            .addStringOption(option =>
-                option.setName('animeid')
-                    .setDescription('AniList anime ID to fetch cover from')
-                    .setRequired(true)
-            );
-
-        try {
-            // Register commands for the specific guild
-            await guild.commands.create(randomAnimeCommand.toJSON());
-            await guild.commands.create(animeStatsCommand.toJSON());
-            await guild.commands.create(animeRecommendCommand.toJSON());
-            await guild.commands.create(animeCoverCommand.toJSON());
-            console.log(`Registered slash commands for guild ${guild.id}`);
-        } catch (error) {
-            console.error(`Failed to register slash commands for guild ${guild.id}:`, error);
-        }
+        // Bulk overwrite replaces existing commands instead of duplicating them
+        await guild.commands.set(commands.map(command => command.toJSON()));
+        logger.info(`Registered ${commands.length} slash commands for guild ${guild.id}`);
     }
 }
 

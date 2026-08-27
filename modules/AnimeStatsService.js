@@ -1,11 +1,27 @@
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger');
 const metricsService = require('../metrics');
 const CacheService = require('./CacheService');
 
 // Main Logic
 class AnimeStatsService {
+    // /animestats slash-command
+    static get commandDefinition() {
+        return {
+            builder: new SlashCommandBuilder()
+                .setName('animestats')
+                .setDescription('Get anime stats for an AniList user')
+                .addStringOption(option =>
+                    option.setName('username')
+                        .setDescription('AniList username to fetch stats from')
+                        .setRequired(true)
+                ),
+            methodName: 'handleAnimeStatsCommand',
+            metricName: 'anime_stats'
+        };
+    }
+
     constructor() {
         this.cache = new CacheService(300000, 'AnimeStats');
     }
@@ -32,6 +48,7 @@ class AnimeStatsService {
                         name
                         entries {
                             status
+                            score
                             media {
                                 averageScore
                             }
@@ -47,6 +64,7 @@ class AnimeStatsService {
                     variables: { username }
                 },
                 {
+                    signal: AbortSignal.timeout(10000),
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -84,10 +102,10 @@ class AnimeStatsService {
             const allEntries = Object.values(statusCategories).flat();
             stats.totalAnime = allEntries.length;
 
-            // Calculate average score
+            // Calculate the user's own average score (unrated entries score 0)
             const validScores = allEntries
-                .map(entry => entry.media.averageScore)
-                .filter(score => score !== null);
+                .map(entry => entry.score)
+                .filter(score => score !== null && score > 0);
 
             if (validScores.length > 0) {
                 stats.averageScore = (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(2);
@@ -165,9 +183,9 @@ class AnimeStatsService {
 
             // Early validation with quick response
             if (!username) {
+                // Note: visibility is fixed by deferReply above, so this posts publicly
                 await interaction.editReply({
-                    content: "❌ Please provide a valid AniList username.",
-                    ephemeral: true
+                    content: "❌ Please provide a valid AniList username."
                 });
                 return;
             }
@@ -195,8 +213,7 @@ class AnimeStatsService {
             - Invalid AniList username
             - Empty anime list
             - AniList API temporarily unavailable
-            - Network connectivity issues`,
-                    ephemeral: true
+            - Network connectivity issues`
                 });
             }
 

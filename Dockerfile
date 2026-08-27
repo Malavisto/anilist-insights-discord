@@ -1,16 +1,17 @@
 # Use an official Node runtime as the base image
-FROM node:23.11.1-alpine
+FROM node:krypton-alpine
 
 # Set working directory in the container
 WORKDIR /usr/src/app
 
 # Install system dependencies and pnpm
 RUN apk add --no-cache tzdata
-RUN npm install -g pnpm
+COPY package.json ./
+RUN corepack install
 
 # Copy package files first to leverage Docker cache
 COPY pnpm-lock.yaml ./
-COPY package.json ./
+COPY pnpm-workspace.yaml ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
