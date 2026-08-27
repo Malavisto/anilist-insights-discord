@@ -229,6 +229,23 @@ describe('AnimeStatsService', () => {
         username
       );
     });
+    test('does not track success when the user does not exist', async () => {
+      const metrics = require('../../metrics');
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: null,
+          MediaListCollection: { lists: [] }
+        }
+      });
+
+      await expect(service.fetchUserAnimeStats('testuser')).rejects.toThrow('not found on AniList');
+
+      const successCalls = metrics.trackApiRequest.mock.calls.filter(
+        call => call[1] === 'success'
+      );
+      expect(successCalls).toHaveLength(0);
+    });
   });
 
   describe('handleAnimeStatsCommand', () => {

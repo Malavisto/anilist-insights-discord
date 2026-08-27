@@ -129,11 +129,10 @@ class RandomAnimeService {
                     }
                 }
             );
-            metricsService.trackApiRequest('anime_random', 'success', username);
-
             if (!response_anime.data.data.MediaList) {
                 throw new Error(`No anime data found for user ${username}`);
             }
+            metricsService.trackApiRequest('anime_random', 'success', username);
 
             const randomAnime = response_anime.data.data.MediaList;
 

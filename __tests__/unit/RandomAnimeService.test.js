@@ -258,6 +258,29 @@ describe('RandomAnimeService', () => {
 
       await expect(service.fetchRandomAnime(username)).rejects.toThrow();
     });
+    test('does not track success when the API returns no MediaList', async () => {
+      const username = 'testuser';
+      const metrics = require('../../metrics');
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [{ entries: [{ media: { id: 5 } }] }]
+          }
+        }
+      });
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: { MediaList: null }
+      });
+
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow('No anime data found');
+
+      const successCalls = metrics.trackApiRequest.mock.calls.filter(
+        call => call[1] === 'success'
+      );
+      expect(successCalls).toHaveLength(0);
+    });
   });
 
   describe('handleRandomAnimeCommand', () => {
