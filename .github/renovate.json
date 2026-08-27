@@ -10,7 +10,9 @@
   "extends": [
     "config:recommended"
   ],
-  "baseBranches": ["dev"],
+  "baseBranchPatterns": [
+    "dev"
+  ],
   "minimumReleaseAge": "7 days",
   "packageRules": [
     {
