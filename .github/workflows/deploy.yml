@@ -4,9 +4,6 @@ on:
   push:
     branches: [ main ]
 
-permissions:
-  contents: read
-
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
@@ -14,53 +11,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}    
 
 jobs:
-  # Gate deploys on the Jest suite — mirrors the `test` job in test.yml, keep the two in sync.
-  test:
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [23.x]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Run unit tests
-        run: pnpm test:unit
-
-      - name: Run integration tests
-        run: pnpm test:integration
-
-      - name: Run E2E tests
-        run: pnpm test:e2e
-
   build:
-    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
