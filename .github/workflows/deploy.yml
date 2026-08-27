@@ -23,7 +23,7 @@ jobs:
         node-version: [23.x]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -71,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Enable emulation so Buildx can build ARM images on the GitHub-hosted runner.
       # https://github.com/docker/setup-qemu-action
