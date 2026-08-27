@@ -129,11 +129,10 @@ class RandomAnimeService {
                     }
                 }
             );
-            metricsService.trackApiRequest('anime_random', 'success', username);
-
             if (!response_anime.data.data.MediaList) {
                 throw new Error(`No anime data found for user ${username}`);
             }
+            metricsService.trackApiRequest('anime_random', 'success', username);
 
             const randomAnime = response_anime.data.data.MediaList;
 
@@ -262,11 +261,15 @@ class RandomAnimeService {
     }
 
     async handleRandomAnimeCommand(interaction) {
+        // Declared out here so the last-resort catch can still reference it
+        // when deferReply fails before the assignment runs
+        let username;
+
         try {
             // Immediately defer the reply to prevent timeout
             await interaction.deferReply({ ephemeral: false });
 
-            const username = interaction.options.getString('username');
+            username = interaction.options.getString('username');
 
             // Early validation with quick response
             if (!username) {

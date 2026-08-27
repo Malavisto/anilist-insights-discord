@@ -5,15 +5,17 @@ module.exports = {
   collectCoverageFrom: [
     'modules/**/*.js',
     'app.js',
+    'metrics.js',
+    'logger.js',
     '!node_modules/**',
     '!__tests__/**'
   ],
   coverageThreshold: {
     global: {
-      branches: 60,
-      functions: 60,
-      lines: 70,
-      statements: 70
+      branches: 70,
+      functions: 70,
+      lines: 80,
+      statements: 80
     }
   },
   verbose: true,

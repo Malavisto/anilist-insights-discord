@@ -71,10 +71,10 @@ class AnimeStatsService {
                     }
                 }
             );
-            metricsService.trackApiRequest('anime_stats', 'success', username);
             if (!response.data.data.User) {
                 throw new Error(`User ${username} not found on AniList`);
             }
+            metricsService.trackApiRequest('anime_stats', 'success', username);
 
             const lists = response.data.data.MediaListCollection.lists;
 
