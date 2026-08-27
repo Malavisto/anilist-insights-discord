@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main, dev ]
 
-# These jobs only read the repo and run tests — no token writes needed.
-permissions:
-  contents: read
-
 jobs:
   test:
     runs-on: ubuntu-latest
