@@ -32,5 +32,5 @@
     "axios-mock-adapter": "^1.22.0",
     "jest": "^29.7.0"
   },
-  "packageManager": "pnpm@11.13.0"
+  "packageManager": "pnpm@11.24.0"
 }

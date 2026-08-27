@@ -6,12 +6,12 @@ WORKDIR /usr/src/app
 
 # Install system dependencies and pnpm
 RUN apk add --no-cache tzdata
-RUN npm install -g pnpm
+COPY package.json ./
+RUN corepack install
 
 # Copy package files first to leverage Docker cache
 COPY pnpm-lock.yaml ./
 COPY pnpm-workspace.yaml ./
-COPY package.json ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
