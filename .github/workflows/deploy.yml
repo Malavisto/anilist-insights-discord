@@ -112,10 +112,10 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /opt/anilist-discord
-          sudo docker compose --project-directory down
+          sudo docker compose --project-directory /opt/anilist-discord down
           git pull
-          sudo docker compose --project-directory pull
-          sudo docker compose --project-directory /opt/anilist-discordup -d
+          sudo docker compose --project-directory /opt/anilist-discord pull
+          sudo docker compose --project-directory /opt/anilist-discord up -d
     - name: Notify Discord - Success
       if: success()
       uses: sarisia/actions-status-discord@v1
