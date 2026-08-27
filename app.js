@@ -194,7 +194,13 @@ class AniListDiscordBot {
 
 // Usage
 function initializeBot() {
-    const bot = new AniListDiscordBot(dis_token);
+    return new AniListDiscordBot(dis_token);
 }
 
-initializeBot();
+// Only boot when run directly (node app.js / pnpm start); requiring the
+// module must not start the bot
+if (require.main === module) {
+    initializeBot();
+}
+
+module.exports = { AniListDiscordBot, initializeBot };
