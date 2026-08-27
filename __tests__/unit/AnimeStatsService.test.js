@@ -1,6 +1,7 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const AnimeStatsService = require('../../modules/AnimeStatsService');
+const { createMockInteraction } = require('../helpers/mockInteraction');
 
 jest.mock('../../logger', () => ({
   error: jest.fn(),
@@ -226,6 +227,115 @@ describe('AnimeStatsService', () => {
         'anime_stats',
         'started',
         username
+      );
+    });
+  });
+
+  describe('handleAnimeStatsCommand', () => {
+    const mockStatsResponse = {
+      data: {
+        User: { id: 1, name: 'testuser' },
+        MediaListCollection: {
+          lists: [
+            { name: 'Completed', entries: [{ status: 'COMPLETED', score: 85, media: { averageScore: 85 } }] },
+            { name: 'Watching', entries: [] },
+            { name: 'Paused', entries: [] },
+            { name: 'Dropped', entries: [] },
+            { name: 'Planning', entries: [] }
+          ]
+        }
+      }
+    };
+
+    test('should defer then edit the reply with the stats embed on success', async () => {
+      const interaction = createMockInteraction({ commandName: 'animestats' });
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, mockStatsResponse);
+
+      await service.handleAnimeStatsCommand(interaction);
+
+      expect(interaction.deferReply).toHaveBeenCalledWith({ ephemeral: false });
+      expect(interaction.editReply).toHaveBeenCalledTimes(1);
+      const embed = interaction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.title).toBe('📊 Anime Stats for testuser');
+    });
+
+    test('should ask for a username when the option is missing', async () => {
+      const interaction = createMockInteraction({
+        commandName: 'animestats',
+        options: { getString: jest.fn().mockReturnValue(undefined) }
+      });
+
+      await service.handleAnimeStatsCommand(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledWith({
+        content: '❌ Please provide a valid AniList username.'
+      });
+      expect(mockAdapter.history.post.length).toBe(0);
+    });
+
+    test('should edit the reply with a friendly error when fetching fails', async () => {
+      const interaction = createMockInteraction({ commandName: 'animestats' });
+      mockAdapter.onPost('https://graphql.anilist.co').networkError();
+
+      await service.handleAnimeStatsCommand(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledWith({
+        content: expect.stringContaining('❌ Error fetching anime stats for testuser')
+      });
+    });
+
+    test('should fall back to reply() when deferReply itself fails', async () => {
+      const interaction = createMockInteraction({
+        commandName: 'animestats',
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction'))
+      });
+
+      await service.handleAnimeStatsCommand(interaction);
+
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.stringContaining('An unexpected error occurred'),
+          ephemeral: true
+        })
+      );
+      expect(interaction.editReply).not.toHaveBeenCalled();
+    });
+
+    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+      const interaction = createMockInteraction({
+        commandName: 'animestats',
+        editReply: jest.fn()
+          .mockRejectedValueOnce(new Error('cannot edit'))
+          .mockResolvedValueOnce(undefined)
+      });
+      mockAdapter.onPost('https://graphql.anilist.co').networkError();
+
+      await service.handleAnimeStatsCommand(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledTimes(2);
+      expect(interaction.editReply).toHaveBeenLastCalledWith({
+        content: '❌ An unexpected error occurred. Please try again later.',
+        ephemeral: true
+      });
+    });
+
+    test('should log and stay silent when every response path fails', async () => {
+      const metrics = require('../../metrics');
+      const logger = require('../../logger');
+      const interaction = createMockInteraction({
+        commandName: 'animestats',
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
+        reply: jest.fn().mockRejectedValue(new Error('cannot reply'))
+      });
+
+      await expect(service.handleAnimeStatsCommand(interaction)).resolves.toBeUndefined();
+
+      // The stats final catch logs only - no metrics are tracked there
+      expect(metrics.trackApiRequest).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to send final error message',
+        expect.any(Object)
       );
     });
   });

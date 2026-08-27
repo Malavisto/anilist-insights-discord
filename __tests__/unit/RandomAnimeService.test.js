@@ -1,6 +1,7 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const RandomAnimeService = require('../../modules/RandomAnimeService');
+const { createMockInteraction } = require('../helpers/mockInteraction');
 
 jest.mock('../../logger', () => ({
   error: jest.fn(),
@@ -256,6 +257,227 @@ describe('RandomAnimeService', () => {
       });
 
       await expect(service.fetchRandomAnime(username)).rejects.toThrow();
+    });
+  });
+
+  describe('handleRandomAnimeCommand', () => {
+    const mockIdsResponse = {
+      data: {
+        User: { id: 1 },
+        MediaListCollection: {
+          lists: [{ entries: [{ media: { id: 5 } }] }]
+        }
+      }
+    };
+
+    const mockAnimeResponse = {
+      data: {
+        MediaList: {
+          media: {
+            id: 5,
+            title: { english: 'Test Anime', romaji: 'テスト アニメ' },
+            episodes: 12,
+            format: 'TV',
+            status: 'FINISHED',
+            genres: ['Action'],
+            description: 'A test anime',
+            averageScore: 85,
+            seasonYear: 2024,
+            coverImage: {
+              large: 'https://example.com/cover.jpg',
+              extraLarge: 'https://example.com/cover_large.jpg'
+            }
+          },
+          status: 'COMPLETED',
+          score: 9
+        }
+      }
+    };
+
+    test('should defer then edit the reply with the anime embed on success', async () => {
+      const interaction = createMockInteraction();
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, mockIdsResponse);
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, mockAnimeResponse);
+
+      await service.handleRandomAnimeCommand(interaction);
+
+      expect(interaction.deferReply).toHaveBeenCalledWith({ ephemeral: false });
+      expect(interaction.editReply).toHaveBeenCalledTimes(1);
+      const embed = interaction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.title).toBe('🌟 Test Anime');
+    });
+
+    test('should ask for a username when the option is missing', async () => {
+      const interaction = createMockInteraction({
+        options: { getString: jest.fn().mockReturnValue(undefined) }
+      });
+
+      await service.handleRandomAnimeCommand(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledWith({
+        content: '❌ Please provide a valid AniList username.'
+      });
+      expect(mockAdapter.history.post.length).toBe(0);
+    });
+
+    test('should edit the reply with a friendly error when fetching fails', async () => {
+      const interaction = createMockInteraction();
+      mockAdapter.onPost('https://graphql.anilist.co').networkError();
+
+      await service.handleRandomAnimeCommand(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledWith({
+        content: expect.stringContaining('❌ Error fetching anime for testuser')
+      });
+    });
+
+    test('should fall back to reply() when deferReply itself fails', async () => {
+      const interaction = createMockInteraction({
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction'))
+      });
+
+      await service.handleRandomAnimeCommand(interaction);
+
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.stringContaining('An unexpected error occurred'),
+          ephemeral: true
+        })
+      );
+      expect(interaction.editReply).not.toHaveBeenCalled();
+    });
+
+    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+      const interaction = createMockInteraction({
+        editReply: jest.fn()
+          .mockRejectedValueOnce(new Error('cannot edit'))
+          .mockResolvedValueOnce(undefined)
+      });
+      mockAdapter.onPost('https://graphql.anilist.co').networkError();
+
+      await service.handleRandomAnimeCommand(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledTimes(2);
+      expect(interaction.editReply).toHaveBeenLastCalledWith({
+        content: '❌ An unexpected error occurred. Please try again later.',
+        ephemeral: true
+      });
+    });
+  });
+
+  describe('createAnimeEmbed', () => {
+    const baseAnime = {
+      id: 5,
+      title: 'Test Anime',
+      episodes: 12,
+      format: 'TV',
+      status: 'FINISHED',
+      genres: ['Action', 'Adventure'],
+      year: 2024,
+      description: 'A test anime',
+      userScore: 9,
+      averageScore: 85,
+      coverImage: 'https://example.com/cover_large.jpg'
+    };
+
+    test('should strip HTML tags and collapse whitespace in descriptions', () => {
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
+        description: '<p>Hello world</p>\n\n  second part'
+      });
+
+      expect(embed.data.description).toBe('📝 Hello world second part');
+    });
+
+    test('should truncate descriptions over 200 characters with an ellipsis', () => {
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
+        description: 'a'.repeat(300)
+      });
+
+      expect(embed.data.description).toBe(`📝 ${'a'.repeat(200)}...`);
+    });
+
+    test('should use a default description when none is provided', () => {
+      const embed = service.createAnimeEmbed({ ...baseAnime, description: '' });
+
+      expect(embed.data.description).toBe('📝 No description available');
+    });
+
+    test('should map known status and format values to emojis', () => {
+      const embed = service.createAnimeEmbed(baseAnime);
+
+      expect(embed.data.fields.find(f => f.name === '📡 Status').value).toBe('✅ FINISHED');
+      expect(embed.data.fields.find(f => f.name === '🎭 Format').value).toBe('📺 TV');
+    });
+
+    test('should use fallback emojis for unknown status and format', () => {
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
+        status: 'HIATUS',
+        format: 'UNKNOWN'
+      });
+
+      expect(embed.data.fields.find(f => f.name === '📡 Status').value).toBe('❓ HIATUS');
+      expect(embed.data.fields.find(f => f.name === '🎭 Format').value).toBe('🎴 UNKNOWN');
+    });
+
+    test('should build title, link and color from the anime', () => {
+      const embed = service.createAnimeEmbed(baseAnime);
+
+      expect(embed.data.title).toBe('🌟 Test Anime');
+      expect(embed.data.url).toBe('https://anilist.co/anime/5');
+      expect(embed.data.color).toBe(0x0099ff);
+    });
+
+    test('should render genre hashtags and the empty-list fallback', () => {
+      const embed = service.createAnimeEmbed(baseAnime);
+      expect(embed.data.fields.find(f => f.name === '🏷️ Genres').value).toBe('#Action #Adventure');
+
+      const emptyGenres = service.createAnimeEmbed({ ...baseAnime, genres: [] });
+      expect(emptyGenres.data.fields.find(f => f.name === '🏷️ Genres').value).toBe('No genres');
+    });
+
+    test('should use fallbacks for missing episodes, year, scores and zero averageScore', () => {
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
+        episodes: 'Unknown',
+        year: null,
+        userScore: null,
+        averageScore: 0
+      });
+
+      expect(embed.data.fields.find(f => f.name === '🎞️ Episodes').value).toBe('🔢 Unknown');
+      expect(embed.data.fields.find(f => f.name === '📅 Year').value).toBe('🗓️ Unknown');
+      expect(embed.data.fields.find(f => f.name === '⭐ Your Score').value).toBe('📊 Not rated');
+      expect(embed.data.fields.find(f => f.name === '📈 Average Score').value).toBe('🌈 N/A%');
+    });
+
+    test('should set the cover image for a valid https URL', () => {
+      const embed = service.createAnimeEmbed(baseAnime);
+
+      expect(embed.data.image.url).toBe('https://example.com/cover_large.jpg');
+    });
+
+    test('should omit the image for non-http URLs', () => {
+      const ftp = service.createAnimeEmbed({ ...baseAnime, coverImage: 'ftp://example.com/cover.jpg' });
+      const garbage = service.createAnimeEmbed({ ...baseAnime, coverImage: 'not-a-url' });
+
+      expect(ftp.data.image).toBeUndefined();
+      expect(garbage.data.image).toBeUndefined();
+    });
+  });
+
+  describe('isValidHttpUrl', () => {
+    test('should accept https and http URLs', () => {
+      expect(service.isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
+      expect(service.isValidHttpUrl('http://example.com')).toBe(true);
+    });
+
+    test('should reject other schemes and malformed strings', () => {
+      expect(service.isValidHttpUrl('ftp://example.com/file')).toBe(false);
+      expect(service.isValidHttpUrl('not a url')).toBe(false);
     });
   });
 });
