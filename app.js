@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits} = require('discord.js');
 const express = require('express');
 const client = require('prom-client');
 
