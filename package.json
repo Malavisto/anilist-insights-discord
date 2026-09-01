@@ -6,9 +6,9 @@
     "start": "node app.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:unit": "jest --testPathPattern=unit",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "jest --testPathPattern=e2e",
+    "test:unit": "jest --testPathPatterns=unit",
+    "test:integration": "jest --testPathPatterns=integration",
+    "test:e2e": "jest --testPathPatterns=e2e",
     "test:coverage": "jest --coverage",
     "bot:start": "bash scripts/bot.sh start",
     "bot:stop": "bash scripts/bot.sh stop",
@@ -28,9 +28,9 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.14",
+    "@types/jest": "^30.0.0",
     "axios-mock-adapter": "^2.0.0",
-    "jest": "^29.7.0"
+    "jest": "^30.0.0"
   },
   "packageManager": "pnpm@11.25.0"
 }
