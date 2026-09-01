@@ -2,7 +2,5 @@ allowBuilds:
   # Both ship prebuilt platform bindings via optional deps; no postinstall needed.
   '@parcel/watcher': false
   unrs-resolver: false
-minimumReleaseAgeExclude:
-  - '@discordjs/rest@2.6.2'
-  - discord.js@14.27.0
-  - undici@6.27.0
+minimumReleaseAge: 10080 # 7 days, in minutes
+

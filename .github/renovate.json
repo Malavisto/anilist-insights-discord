@@ -1,9 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "dependencyDashboard": true,
+  "timezone": "Africa/Johannesburg",
+  "automergeType": "branch",
+  // 00:00 to 09:00 SAST
+  "schedule": [
+    "* 0-9 * * *"
+  ],
   "extends": [
     "config:recommended"
   ],
   "baseBranches": ["dev"],
+  "minimumReleaseAge": "7 days",
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
