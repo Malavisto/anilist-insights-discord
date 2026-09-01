@@ -246,27 +246,57 @@ describe('Integration Tests - Service Interactions', () => {
     });
 
     test('should maintain cache consistency during errors', async () => {
+      const metrics = require('../../metrics');
       const service = new RandomAnimeService();
       const username = 'testuser';
 
-      // Set up cache
-      service.cache.set('anime_ids_testuser', [1, 2, 3]);
-
-      // API error should not affect cache
-      mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: []
+      // First call succeeds and populates the ID cache
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [{ entries: [{ media: { id: 42 } }] }]
+          }
+        }
+      });
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          MediaList: {
+            media: {
+              id: 42,
+              title: { english: 'Test Anime', romaji: 'テスト アニメ' },
+              episodes: 12,
+              format: 'TV',
+              status: 'FINISHED',
+              genres: ['Action'],
+              description: 'A test anime',
+              averageScore: 85,
+              seasonYear: 2024,
+              coverImage: {
+                large: 'https://example.com/cover.jpg',
+                extraLarge: 'https://example.com/cover_large.jpg'
+              }
+            },
+            status: 'COMPLETED',
+            score: 9
+          }
+        }
       });
 
-      try {
-        // This will use cached IDs and then fail on anime fetch
-        const randomID = [1, 2, 3][Math.floor(Math.random() * 3)];
-        expect(randomID).toBeTruthy();
-      } catch (e) {
-        // Ignore
-      }
+      const result = await service.fetchRandomAnime(username);
+      expect(result.id).toBe(42);
 
-      // Cache should still have the data
-      expect(service.cache.get('anime_ids_testuser')).toEqual([1, 2, 3]);
+      // Everything fails from now on
+      mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
+        errors: [{ message: 'Server error' }]
+      });
+
+      // Second call serves the cached IDs, then fails on the detail fetch
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow();
+      expect(metrics.trackCacheHit).toHaveBeenCalledWith('anime_random');
+
+      // The failed fetch must not have touched the cached IDs
+      expect(service.cache.get('anime_ids_testuser')).toEqual([42]);
     });
   });
 

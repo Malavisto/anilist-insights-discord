@@ -14,7 +14,265 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
             },
-            "description": "Total commands executed by type",
+            "description": "Commands executed per minute, across all commands",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "id": 7,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum(rate(anilist_bot_commands_total[$__rate_interval])) * 60 or vector(0)",
+                    "refId": "A"
+                }
+            ],
+            "title": "Commands / min",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Share of command executions that completed successfully",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 1,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.95
+                            },
+                            {
+                                "color": "green",
+                                "value": 0.99
+                            }
+                        ]
+                    },
+                    "unit": "percentunit"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "id": 8,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum(rate(anilist_bot_command_duration_seconds_count{status=\"success\"}[$__rate_interval])) / sum(rate(anilist_bot_command_duration_seconds_count[$__rate_interval]))",
+                    "refId": "A"
+                }
+            ],
+            "title": "Success Rate",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Share of AniList API requests served from cache instead of hitting the API",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 1,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.25
+                            },
+                            {
+                                "color": "green",
+                                "value": 0.5
+                            }
+                        ]
+                    },
+                    "unit": "percentunit"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 0
+            },
+            "id": 9,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum(rate(anilist_api_requests_total{status=\"cache_hit\"}[$__rate_interval])) / sum(rate(anilist_api_requests_total{status=\"started\"}[$__rate_interval]))",
+                    "refId": "A"
+                }
+            ],
+            "title": "Cache Hit Ratio",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Errors encountered per minute, across all commands",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "decimals": 2,
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 0
+            },
+            "id": 10,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum(rate(anilist_bot_errors_total[$__rate_interval])) * 60 or vector(0)",
+                    "refId": "A"
+                }
+            ],
+            "title": "Errors / min",
+            "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Commands executed per interval by type",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -67,7 +325,7 @@
                 "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 0
+                "y": 4
             },
             "id": 2,
             "options": {
@@ -87,7 +345,7 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "expr": "sum(anilist_bot_commands_total) by (command_type)",
+                    "expr": "sum by (command_type) (increase(anilist_bot_commands_total{command_type=~\"$command\"}[$__rate_interval]))",
                     "refId": "A"
                 }
             ],
@@ -99,7 +357,7 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
             },
-            "description": "Duration of command execution by type",
+            "description": "p95 duration of successful command executions by type (red line at 5s; the bot aborts AniList requests at 10s)",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -157,12 +415,15 @@
                 "h": 8,
                 "w": 12,
                 "x": 12,
-                "y": 0
+                "y": 4
             },
             "id": 3,
             "options": {
                 "legend": {
-                    "calcs": ["mean", "max"],
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
                     "displayMode": "table",
                     "placement": "bottom"
                 },
@@ -177,12 +438,12 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "expr": "histogram_quantile(0.95, rate(anilist_bot_command_duration_seconds_bucket[5m]))",
-                    "refId": "A",
-                    "legendFormat": "{{command_type}} 95th Percentile"
+                    "expr": "histogram_quantile(0.95, sum by (le, command_type) (rate(anilist_bot_command_duration_seconds_bucket{status=\"success\", command_type=~\"$command\"}[$__rate_interval])))",
+                    "legendFormat": "{{command_type}} p95",
+                    "refId": "A"
                 }
             ],
-            "title": "Command Execution Duration",
+            "title": "Command Execution Duration (p95)",
             "type": "timeseries"
         },
         {
@@ -190,7 +451,7 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
             },
-            "description": "AniList API request status breakdown",
+            "description": "AniList API requests per interval by endpoint and status (started / cache_hit / success / failure), aggregated across users",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -243,7 +504,7 @@
                 "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 8
+                "y": 12
             },
             "id": 4,
             "options": {
@@ -263,11 +524,11 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "expr": "sum(anilist_api_requests_total) by (status, endpoint)",
+                    "expr": "sum by (endpoint, status) (increase(anilist_api_requests_total[$__rate_interval]))",
                     "refId": "A"
                 }
             ],
-            "title": "AniList API Request Status",
+            "title": "AniList API Requests",
             "type": "timeseries"
         },
         {
@@ -275,7 +536,7 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
             },
-            "description": "Total errors encountered by type",
+            "description": "Errors encountered per interval by type",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -321,7 +582,7 @@
                             },
                             {
                                 "color": "red",
-                                "value": 10
+                                "value": 1
                             }
                         ]
                     }
@@ -332,7 +593,7 @@
                 "h": 8,
                 "w": 12,
                 "x": 12,
-                "y": 8
+                "y": 12
             },
             "id": 5,
             "options": {
@@ -352,7 +613,7 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "expr": "sum(anilist_bot_errors_total) by (error_type, command_type)",
+                    "expr": "sum by (error_type, command_type) (increase(anilist_bot_errors_total{command_type=~\"$command\"}[$__rate_interval]))",
                     "refId": "A"
                 }
             ],
@@ -364,7 +625,7 @@
                 "type": "prometheus",
                 "uid": "${datasource}"
             },
-            "description": "Cache usage to reduce unnecessary API calls",
+            "description": "Commands served from cache per interval, by cache type — every hit is an AniList API call avoided",
             "fieldConfig": {
                 "defaults": {
                     "color": {
@@ -417,7 +678,7 @@
                 "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 16
+                "y": 20
             },
             "id": 6,
             "options": {
@@ -437,15 +698,326 @@
                         "type": "prometheus",
                         "uid": "${datasource}"
                     },
-                    "expr": "sum(anilist_bot_cache_hits) by (cache_type)",
+                    "expr": "sum by (cache_type) (increase(anilist_bot_cache_hits{cache_type=~\"$command\"}[$__rate_interval]))",
                     "refId": "A"
                 }
             ],
             "title": "Cache Hits",
             "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Resident set size and used V8 heap of the bot process",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "bytes"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 20
+            },
+            "id": 11,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "process_resident_memory_bytes{job=~\"$job\"}",
+                    "legendFormat": "RSS",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "nodejs_heap_size_used_bytes{job=~\"$job\"}",
+                    "legendFormat": "Heap used",
+                    "refId": "B"
+                }
+            ],
+            "title": "Process Memory",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Node.js event loop lag — sustained growth means the process is saturated",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "unit": "s"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 28
+            },
+            "id": 12,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "nodejs_eventloop_lag_seconds{job=~\"$job\"}",
+                    "legendFormat": "current",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "nodejs_eventloop_lag_mean_seconds{job=~\"$job\"}",
+                    "legendFormat": "mean",
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "nodejs_eventloop_lag_max_seconds{job=~\"$job\"}",
+                    "legendFormat": "max",
+                    "refId": "C"
+                }
+            ],
+            "title": "Event Loop Lag",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "CPU usage of the bot process (can exceed 100% on multi-core hosts)",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "max": 100,
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 80
+                            },
+                            {
+                                "color": "red",
+                                "value": 100
+                            }
+                        ]
+                    },
+                    "unit": "percent"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 28
+            },
+            "id": 13,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom"
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "rate(process_cpu_seconds_total{job=~\"$job\"}[$__rate_interval]) * 100",
+                    "legendFormat": "CPU",
+                    "refId": "A"
+                }
+            ],
+            "title": "CPU Usage",
+            "type": "timeseries"
         }
     ],
-    "refresh": "",
+    "refresh": "30s",
     "schemaVersion": 38,
     "style": "dark",
     "tags": ["anilist", "discord", "bot", "metrics"],
@@ -469,6 +1041,59 @@
                 "regex": "",
                 "skipUrlSync": false,
                 "type": "datasource"
+            },
+            {
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                },
+                "definition": "label_values(anilist_bot_commands_total, command_type)",
+                "description": "Filter command-centric panels by slash command",
+                "hide": 0,
+                "includeAll": true,
+                "label": "Command",
+                "multi": true,
+                "name": "command",
+                "options": [],
+                "query": {
+                    "query": "label_values(anilist_bot_commands_total, command_type)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
+            },
+            {
+                "allValue": ".*",
+                "current": {
+                    "selected": false,
+                    "text": "All",
+                    "value": "$__all"
+                },
+                "definition": "label_values(process_start_time_seconds, job)",
+                "description": "Filter process-health panels by scrape job",
+                "hide": 2,
+                "includeAll": true,
+                "label": "Job",
+                "multi": false,
+                "name": "job",
+                "options": [],
+                "query": {
+                    "query": "label_values(process_start_time_seconds, job)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
             }
         ]
     },
@@ -480,6 +1105,6 @@
     "timezone": "",
     "title": "AniList Discord Bot Metrics",
     "uid": "anilist_bot_metrics",
-    "version": 1,
+    "version": 2,
     "weekStart": ""
 }

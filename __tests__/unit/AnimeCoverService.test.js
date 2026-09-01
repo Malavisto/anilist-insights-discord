@@ -1,6 +1,7 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const AnimeCoverService = require('../../modules/AnimeCoverService');
+const { createMockInteraction } = require('../helpers/mockInteraction');
 
 jest.mock('../../logger', () => ({
   error: jest.fn(),
@@ -153,14 +154,10 @@ describe('AnimeCoverService', () => {
 
   describe('handleAnimeCoverCommand', () => {
     test('should defer reply when handling command', async () => {
-      const mockInteraction = {
-        user: { username: 'testuser' },
-        options: {
-          getString: jest.fn().mockReturnValue('1')
-        },
-        deferReply: jest.fn().mockResolvedValue(undefined),
-        editReply: jest.fn().mockResolvedValue(undefined)
-      };
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        options: { getString: jest.fn().mockReturnValue('1') }
+      });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -178,14 +175,10 @@ describe('AnimeCoverService', () => {
     });
 
     test('should validate anime ID format', async () => {
-      const mockInteraction = {
-        user: { username: 'testuser' },
-        options: {
-          getString: jest.fn().mockReturnValue('invalid')
-        },
-        deferReply: jest.fn().mockResolvedValue(undefined),
-        editReply: jest.fn().mockResolvedValue(undefined)
-      };
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        options: { getString: jest.fn().mockReturnValue('invalid') }
+      });
 
       await service.handleAnimeCoverCommand(mockInteraction);
 
@@ -195,14 +188,10 @@ describe('AnimeCoverService', () => {
     });
 
     test('should handle empty anime ID', async () => {
-      const mockInteraction = {
-        user: { username: 'testuser' },
-        options: {
-          getString: jest.fn().mockReturnValue('')
-        },
-        deferReply: jest.fn().mockResolvedValue(undefined),
-        editReply: jest.fn().mockResolvedValue(undefined)
-      };
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        options: { getString: jest.fn().mockReturnValue('') }
+      });
 
       await service.handleAnimeCoverCommand(mockInteraction);
 
@@ -212,14 +201,10 @@ describe('AnimeCoverService', () => {
     });
 
     test('should reply with error if no cover found', async () => {
-      const mockInteraction = {
-        user: { username: 'testuser' },
-        options: {
-          getString: jest.fn().mockReturnValue('999999')
-        },
-        deferReply: jest.fn().mockResolvedValue(undefined),
-        editReply: jest.fn().mockResolvedValue(undefined)
-      };
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        options: { getString: jest.fn().mockReturnValue('999999') }
+      });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -246,14 +231,10 @@ describe('AnimeCoverService', () => {
     });
 
     test('should send embed with cover image on success', async () => {
-      const mockInteraction = {
-        user: { username: 'testuser' },
-        options: {
-          getString: jest.fn().mockReturnValue('1')
-        },
-        deferReply: jest.fn().mockResolvedValue(undefined),
-        editReply: jest.fn().mockResolvedValue(undefined)
-      };
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        options: { getString: jest.fn().mockReturnValue('1') }
+      });
 
       const coverUrl = 'https://example.com/cover.jpg';
 
@@ -280,6 +261,39 @@ describe('AnimeCoverService', () => {
         'anime_cover',
         'success',
         'testuser'
+      );
+    });
+
+    test('should reply ephemerally when deferReply fails', async () => {
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction'))
+      });
+
+      await service.handleAnimeCoverCommand(mockInteraction);
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.stringContaining('An error occurred while fetching the anime cover'),
+          ephemeral: true
+        })
+      );
+      expect(mockInteraction.editReply).not.toHaveBeenCalled();
+    });
+
+    test('should log when the fallback reply also fails', async () => {
+      const logger = require('../../logger');
+      const mockInteraction = createMockInteraction({
+        commandName: 'animecover',
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
+        reply: jest.fn().mockRejectedValue(new Error('cannot reply'))
+      });
+
+      await expect(service.handleAnimeCoverCommand(mockInteraction)).resolves.toBeUndefined();
+
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to send final error message',
+        expect.any(Object)
       );
     });
   });
