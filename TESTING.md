@@ -9,12 +9,18 @@ This project uses a comprehensive three-tier testing strategy with Jest to ensur
 
 Unit tests focus on testing individual services and modules in isolation. They use mocked function dependencies to ensure each unit behaves correctly independently.
 
-**What's Tested:**
+**What's Mainly Tested:**
 - CacheService: TTL expiration, cache hits/misses, statistics
-- RandomAnimeService: Anime fetching, caching, error handling
-- AnimeRecommendationService: Recommendation logic, recommendations filtering
-- AnimeStatsService: Stats calculation, statistics aggregation
+- RandomAnimeService: Anime fetching, list caching, error handling
+- AnimeRecommendationService: Recommendation logic, recommendations filtering, error handling
+- AnimeStatsService: Stats calculation, statistics aggregation, stats caching
 - AnimeCoverService: Cover image retrieval, command handling
+- AnilistDiscordBot: Bot initialization, command registration, interaction handling, metrics and shutdown sequence
+
+**What's tested but deemed lower priority**
+- Logger: winston export, console output and record taging
+- MetricsService: Command tracking, user privacy, consitent stats updates and cache tracking
+
 
 **Run unit tests:**
 ```bash

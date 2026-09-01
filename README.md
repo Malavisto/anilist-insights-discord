@@ -23,7 +23,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) version 23 or later installed or [Docker](https://www.docker.com/) with docker compose.
+1. [Node.js](https://nodejs.org/) version 24 with nvm or later installed or [Docker](https://www.docker.com/) with docker compose.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
 4. Install dependencies **NodeJS Only**:
    ```
@@ -81,11 +81,16 @@ pnpm bot:attach
 1. Use the `/animestats` command in Discord and provide your AniList username.
 2. The bot will generate stats from your AniList and display them an embed.
 
+### Anime Cover (Not used much)
+1. Use the `/animecover` command in discord and provide an AniList anime ID
+2. The bot will fetch the cover and serve an embed with the link
+
+
 ## Development
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) version 23 or later installed.
+1. [Node.js](https://nodejs.org/) version 24 or later installed.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
 4. Install dependencies:
    ```
@@ -126,6 +131,7 @@ pnpm bot:attach
 - The project uses:
   - [discord.js](https://discord.js.org) for Discord integration.
   - [Axios](https://axios-http.com/) for AniList API requests.
+  - [Jest](https://jestjs.io/) for testing suite
   - Slash commands for an interactive experience.
 - Errors and logging are handled with a custom logger for better debugging.
 
