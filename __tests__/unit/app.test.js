@@ -24,6 +24,7 @@ jest.mock('../../metrics', () => ({
 
 // Service instances the bot should hold
 const mockRandom = { handleRandomAnimeCommand: jest.fn() };
+const mockManga = { handleRandomMangaCommand: jest.fn() };
 const mockStats = { handleAnimeStatsCommand: jest.fn() };
 const mockRecommendation = { handleAnimeRecommendCommand: jest.fn() };
 const mockCover = { handleAnimeCoverCommand: jest.fn() };
@@ -31,6 +32,7 @@ const mockCover = { handleAnimeCoverCommand: jest.fn() };
 // Real command definitions (real SlashCommandBuilders) keep this test honest
 // about the register/dispatch sync invariant; only the constructor is faked.
 const mockRealRandom = jest.requireActual('../../modules/RandomAnimeService');
+const mockRealManga = jest.requireActual('../../modules/RandomMangaService');
 const mockRealStats = jest.requireActual('../../modules/AnimeStatsService');
 const mockRealRecommendation = jest.requireActual('../../modules/animeRecommendation');
 const mockRealCover = jest.requireActual('../../modules/AnimeCoverService');
@@ -41,6 +43,13 @@ jest.mock('../../modules/RandomAnimeService', () => {
     get: () => mockRealRandom.commandDefinition
   });
   return MockRandomAnimeService;
+});
+jest.mock('../../modules/RandomMangaService', () => {
+  const MockRandomMangaService = jest.fn(() => mockManga);
+  Object.defineProperty(MockRandomMangaService, 'commandDefinition', {
+    get: () => mockRealManga.commandDefinition
+  });
+  return MockRandomMangaService;
 });
 jest.mock('../../modules/AnimeStatsService', () => {
   const MockAnimeStatsService = jest.fn(() => mockStats);
@@ -121,18 +130,21 @@ describe('AniListDiscordBot', () => {
       });
     });
 
-    test('instantiates the four services', () => {
+    test('instantiates the five services', () => {
       const RandomAnimeService = require('../../modules/RandomAnimeService');
+      const RandomMangaService = require('../../modules/RandomMangaService');
       const AnimeStatsService = require('../../modules/AnimeStatsService');
       const AnimeRecommendationService = require('../../modules/animeRecommendation');
       const AnimeCoverService = require('../../modules/AnimeCoverService');
 
       expect(RandomAnimeService).toHaveBeenCalledTimes(1);
+      expect(RandomMangaService).toHaveBeenCalledTimes(1);
       expect(AnimeStatsService).toHaveBeenCalledTimes(1);
       expect(AnimeRecommendationService).toHaveBeenCalledTimes(1);
       expect(AnimeCoverService).toHaveBeenCalledTimes(1);
 
       expect(bot.randomAnimeService).toBe(mockRandom);
+      expect(bot.randomMangaService).toBe(mockManga);
       expect(bot.animeStatsService).toBe(mockStats);
       expect(bot.recommendationService).toBe(mockRecommendation);
       expect(bot.animeCoverService).toBe(mockCover);
@@ -158,7 +170,7 @@ describe('AniListDiscordBot', () => {
   });
 
   describe('registerSlashCommands', () => {
-    test('bulk-overwrites the four command builders as JSON', async () => {
+    test('bulk-overwrites the five command builders as JSON', async () => {
       const guild = { id: 'g1', commands: { set: jest.fn().mockResolvedValue(undefined) } };
 
       await bot.registerSlashCommands(guild);
@@ -166,7 +178,7 @@ describe('AniListDiscordBot', () => {
       expect(guild.commands.set).toHaveBeenCalledTimes(1);
       const commands = guild.commands.set.mock.calls[0][0];
       expect(commands.map(command => command.name)).toEqual([
-        'animerandom', 'animestats', 'animerecommend', 'animecover'
+        'animerandom', 'mangarandom', 'animestats', 'animerecommend', 'animecover'
       ]);
     });
 
@@ -176,7 +188,7 @@ describe('AniListDiscordBot', () => {
       await bot.registerSlashCommands(guild);
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('4 slash commands for guild g1')
+        expect.stringContaining('5 slash commands for guild g1')
       );
     });
 
@@ -197,6 +209,7 @@ describe('AniListDiscordBot', () => {
       const handler = onInteractionCreate();
       const commands = [
         ['animerandom', mockRandom, 'handleRandomAnimeCommand'],
+        ['mangarandom', mockManga, 'handleRandomMangaCommand'],
         ['animestats', mockStats, 'handleAnimeStatsCommand'],
         ['animerecommend', mockRecommendation, 'handleAnimeRecommendCommand'],
         ['animecover', mockCover, 'handleAnimeCoverCommand']
@@ -215,11 +228,11 @@ describe('AniListDiscordBot', () => {
     test('tracks the command with its metric name and guild id', async () => {
       const metrics = require('../../metrics');
       const handler = onInteractionCreate();
-      const interaction = createMockInteraction({ commandName: 'animerandom' });
+      const interaction = createMockInteraction({ commandName: 'mangarandom' });
 
       await handler(interaction);
 
-      expect(metrics.trackCommand).toHaveBeenCalledWith('anime_random', 'guild-123');
+      expect(metrics.trackCommand).toHaveBeenCalledWith('manga_random', 'guild-123');
     });
 
     test('ends the command timer with success when the handler resolves', async () => {
