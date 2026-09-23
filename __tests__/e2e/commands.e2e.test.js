@@ -158,7 +158,7 @@ describe('E2E Tests - Command Interactions', () => {
               genres: ['Action', 'Adventure', 'Drama'],
               description: 'A story about a lone mercenary',
               averageScore: 94,
-              seasonYear: 1990,
+              startDate: { year: 1990 },
               coverImage: {
                 large: 'https://example.com/cover.jpg',
                 extraLarge: 'https://example.com/cover_large.jpg'

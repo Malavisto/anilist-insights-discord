@@ -37,7 +37,7 @@ class AniListDiscordBot {
         this.randomAnimeService = new RandomAnimeService();
         this.animeStatsService = new AnimeStatsService();
         this.animeCoverService = new AnimeCoverService();
-        this.RandomMangaService = new RandomMangaService();
+        this.randomMangaService = new RandomMangaService();
 
         this.setupMetricsServer();
 
@@ -146,7 +146,7 @@ class AniListDiscordBot {
 
             const commandHandlers = {
                 [randomAnimeDef.builder.name]: [this.randomAnimeService, randomAnimeDef.methodName, randomAnimeDef.metricName],
-                [randomMangaDef.builder.name]: [this.RandomMangaService, randomMangaDef.methodName, randomMangaDef.metricName],
+                [randomMangaDef.builder.name]: [this.randomMangaService, randomMangaDef.methodName, randomMangaDef.metricName],
                 [statsDef.builder.name]: [this.animeStatsService, statsDef.methodName, statsDef.metricName],
                 [recommendationDef.builder.name]: [this.recommendationService, recommendationDef.methodName, recommendationDef.metricName],
                 [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName],

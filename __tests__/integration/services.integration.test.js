@@ -162,7 +162,7 @@ describe('Integration Tests - Service Interactions', () => {
               genres: [],
               description: '',
               averageScore: 80,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: { large: 'url', extraLarge: 'url' }
             },
             status: 'COMPLETED',
@@ -188,7 +188,7 @@ describe('Integration Tests - Service Interactions', () => {
               genres: [],
               description: '',
               averageScore: 85,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: { large: 'url', extraLarge: 'url' }
             },
             status: 'COMPLETED',
@@ -283,7 +283,7 @@ describe('Integration Tests - Service Interactions', () => {
               genres: ['Action'],
               description: 'A test manga',
               averageScore: 85,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: {
                 large: 'https://example.com/cover.jpg',
                 extraLarge: 'https://example.com/cover_large.jpg'

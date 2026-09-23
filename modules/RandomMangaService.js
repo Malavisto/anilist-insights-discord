@@ -64,7 +64,9 @@ class RandomMangaService {
                                 genres
                                 description
                                 averageScore
-                                seasonYear
+                                startDate{
+                                    year
+                                }
                                 coverImage {
                                     large
                                     extraLarge
@@ -147,7 +149,7 @@ class RandomMangaService {
                 userScore: randomManga.score,
                 averageScore: randomManga.media.averageScore,
                 genres: randomManga.media.genres,
-                year: randomManga.media.seasonYear,
+                year: randomManga.media.startDate?.year,
                 description: randomManga.media.description,
                 coverImage: randomManga.media.coverImage.extraLarge ||
                     randomManga.media.coverImage.large ||
@@ -211,13 +213,13 @@ class RandomMangaService {
                     inline: true
                 },
                 {
-                    name: '📕 Volumes',
-                    value: `🔢 ${manga.volumes.toString()}` || 'Unknown',
+                    name: '📚 Volumes',
+                    value: `🔢 ${manga.volumes.toString()}`,
                     inline: true
                 },
                 {
-                    name: '📄 Chapters',
-                    value: `🔢 ${manga.chapters.toString()}` || 'Unknown',
+                    name: '📖 Chapters',
+                    value: `🔢 ${manga.chapters.toString()}`,
                     inline: true
                 },
                 {

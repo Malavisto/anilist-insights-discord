@@ -84,7 +84,7 @@ describe('RandomMangaService', () => {
               genres: ['Action', 'Adventure'],
               description: 'A test manga',
               averageScore: 85,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: {
                 large: 'https://example.com/cover.jpg',
                 extraLarge: 'https://example.com/cover_large.jpg'
@@ -136,7 +136,7 @@ describe('RandomMangaService', () => {
               genres: [],
               description: '',
               averageScore: 80,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: { large: 'url', extraLarge: 'url' }
             },
             status: 'COMPLETED',
@@ -161,7 +161,7 @@ describe('RandomMangaService', () => {
               genres: [],
               description: '',
               averageScore: 75,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: { large: 'url', extraLarge: 'url' }
             },
             status: 'COMPLETED',
@@ -240,7 +240,7 @@ describe('RandomMangaService', () => {
               genres: [],
               description: '',
               averageScore: 80,
-              seasonYear: 2024,
+              startDate: { year: 2024 },
               coverImage: { large: 'url', extraLarge: 'url' }
             },
             status: 'COMPLETED',
@@ -330,7 +330,7 @@ describe('RandomMangaService', () => {
             genres: ['Action'],
             description: 'A test manga',
             averageScore: 85,
-            seasonYear: 2024,
+            startDate: { year: 2024 },
             coverImage: {
               large: 'https://example.com/cover.jpg',
               extraLarge: 'https://example.com/cover_large.jpg'
@@ -442,7 +442,7 @@ describe('RandomMangaService', () => {
       chapters: 120,
       volumes: 8,
       format: 'MANGA',
-      status: 'FINISHED',
+      status: 'COMPLETED',
       genres: ['Action', 'Adventure'],
       year: 2024,
       description: 'A test manga',
@@ -478,7 +478,7 @@ describe('RandomMangaService', () => {
     test('should map known status and format values to emojis', () => {
       const embed = service.createMangaEmbed(baseManga);
 
-      expect(embed.data.fields.find(f => f.name === '📡 Status').value).toBe('✅ FINISHED');
+      expect(embed.data.fields.find(f => f.name === '📡 Status').value).toBe('✅ COMPLETED');
       expect(embed.data.fields.find(f => f.name === '🎭 Format').value).toBe('📖 MANGA');
     });
 
