@@ -12,6 +12,7 @@ Unit tests focus on testing individual services and modules in isolation. They u
 **What's Mainly Tested:**
 - CacheService: TTL expiration, cache hits/misses, statistics
 - RandomAnimeService: Anime fetching, list caching, error handling
+- RandomMangaService: Manga fetching, ID-list caching, error handling
 - AnimeRecommendationService: Recommendation logic, recommendations filtering, error handling
 - AnimeStatsService: Stats calculation, statistics aggregation, stats caching
 - AnimeCoverService: Cover image retrieval, command handling
@@ -51,6 +52,7 @@ End-to-end tests simulate complete command execution flows, verifying that all c
 
 **What's Tested:**
 - `/animerandom` command flow
+- `/mangarandom` command flow
 - `/animestats` command flow
 - `/animerecommend` command flow
 - `/animecover` command flow
@@ -87,8 +89,8 @@ Coverage reports are saved to `coverage/` directory. Thresholds:
 ## Test Environment Setup
 
 ### Prerequisites
-- Node.js 23+ (tested on 23.x and 24,x)
-- pnpm 11.13.0+
+- Node.js 24+ (matches the bot's runtime and the CI matrix)
+- pnpm 12.x (pinned via `packageManager` in `package.json`)
 
 ### Install dependencies
 ```bash
@@ -103,13 +105,16 @@ All testing dependencies are included in `devDependencies`:
 ## GitHub Actions CI Pipeline
 
 The project includes a complete GitHub Actions workflow (`.github/workflows/test.yml`) that runs on:
-- **Triggers:** Push to `main`/`develop` branches, PRs to `main`/`develop`
-- **Node versions:** 18.x, 20.x, 23.x (matrix strategy for cross-version compatibility)
-- **Steps:**
+- **Triggers:** Push to `dev`/`renovate/**` branches, PRs to `main`/`dev`
+- **Node versions:** 24.x (single-version matrix)
+- **Test job steps:**
   1. Install dependencies
   2. Run unit tests
   3. Run integration tests
   4. Run E2E tests
+  5. Run tests with coverage (enforces jest.config.js thresholds)
+
+A separate **lint** job runs ESLint non-blockingly (`|| true`), so the Jest steps are the meaningful checks.
 
 
 ## Test Data Strategy
@@ -161,6 +166,7 @@ __tests__/
 ├── unit/
 │   ├── CacheService.test.js
 │   ├── RandomAnimeService.test.js
+│   ├── RandomMangaService.test.js
 │   └── ...
 ├── integration/
 │   └── services.integration.test.js
@@ -214,19 +220,19 @@ mockAdapter.onPost('https://api.example.com').replyOnce(200, {
 ## Test Metrics
 
 Current test coverage:
-- **Total Tests:** 80
-- **Unit Tests:** 59
-- **Integration Tests:** 8
-- **E2E Tests:** 13
+- **Total Tests:** 199
+- **Unit Tests:** 170
+- **Integration Tests:** 12
+- **E2E Tests:** 17
 - **All Passing:** ✅
 
 ## Performance
 
 Typical test execution times:
-- Unit tests: ~2.3 seconds
-- Integration tests: ~1.3 seconds
-- E2E tests: ~1.2 seconds
-- **Total:** ~4.8 seconds
+- Unit tests: ~1.3 seconds
+- Integration tests: ~0.5 seconds
+- E2E tests: ~0.5 seconds
+- **Total:** ~2.0 seconds
 
 ## Continuous Improvement
 
@@ -244,7 +250,7 @@ Typical test execution times:
 ## Troubleshooting
 
 ### Tests fail locally but pass in CI
-- Ensure Node version matches CI matrix (18.x, 20.x, or 23.x)
+- Ensure Node version matches CI matrix (24.x)
 - Clear cache: `rm -rf node_modules pnpm-lock.yaml && pnpm install`
 - Check for hardcoded paths or platform-specific issues
 

@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project Overview
 
-A Discord bot (discord.js v14) that answers `/animerandom`, `/animestats`, `/animerecommend`, and `/animecover` slash commands by querying the AniList GraphQL API. Plain CommonJS Node.js (24+), installed with nvm with no build step or TypeScript; package manager is pnpm, pinned via `packageManager`.
+A Discord bot (discord.js v14) that answers `/animerandom`, `/mangarandom`, `/animestats`, `/animerecommend`, and `/animecover` slash commands by querying the AniList GraphQL API. Plain CommonJS Node.js (24+), installed with nvm with no build step or TypeScript; package manager is pnpm, pinned via `packageManager`.
 
 ## Commands
 
@@ -27,20 +27,22 @@ Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-m
 
 `app.js` owns **both halves** of every slash command, and they must stay in sync:
 
-1. `registerSlashCommands(guild)` — `SlashCommandBuilder` definitions, registered per-guild on client ready via bulk overwrite (`guild.commands.set`).
-2. The `interactionCreate` handler dispatches through a `commandHandlers` map of `{ commandName: [serviceInstance, methodName, metricName] }`.
+1. `registerSlashCommands(guild)` — builds the command list from each service's static `commandDefinition.builder`, registered per-guild on client ready via bulk overwrite (`guild.commands.set`).
+2. The `interactionCreate` handler dispatches through a `commandHandlers` map of `{ commandName: [serviceInstance, methodName, metricName] }`, keyed off the same `commandDefinition`.
 
-Adding/renaming a command means updating **both places**, plus creating/extending the service in `modules/`. The dispatcher wraps each call in `metricsService.trackCommand(...)`, invoking the returned end-timer with `'success'`/`'failure'` in a `finally` block.
+Each service owns a static `commandDefinition` getter (`{ builder, methodName, metricName }`) that is the single source of truth for its command name, handler method, and metric — but `app.js` still lists every service explicitly in **both** places, so they must stay in sync by hand. Adding/renaming a command means adding/updating the `commandDefinition` in the service in `modules/`, then referencing it in both places in `app.js`. The dispatcher wraps each call in `metricsService.trackCommand(...)`, invoking the returned end-timer with `'success'`/`'failure'` in a `finally` block.
 
 ### Service pattern (`modules/`)
 
-One service per command (`RandomAnimeService`, `AnimeStatsService`, `AnimeCoverService`, plus `animeRecommendation.js` exporting `AnimeRecommendationService` — filename doesn't match export). Each follows the same three-part shape:
+One service per command (`RandomAnimeService`, `RandomMangaService`, `AnimeStatsService`, `AnimeCoverService`, plus `animeRecommendation.js` exporting `AnimeRecommendationService` — filename doesn't match export). Each follows the same three-part shape:
 
 - `fetchX(username)` — checks its own `CacheService` first, then POSTs a GraphQL query to `https://graphql.anilist.co` via axios with `AbortSignal.timeout(10000)`; throws on empty/invalid results.
 - `createEmbed(...)` — builds the discord.js `EmbedBuilder` reply.
 - `handleXCommand(interaction)` — `deferReply` → fetch → `editReply`. Services catch their own fetch errors, log them, and post the user-facing error message; `app.js` only logs anything that escapes.
 
-Each service constructor creates a **private** `CacheService`: in-memory TTL Map (5-min TTL, 60s background sweep, `unref()`'d timer), keyed like `recommendation_${username}`. Caching is per-process only — nothing persists across restarts.
+The two `Random*` services deliberately split their fetch into two GraphQL queries — one to grab the user's media ID list, then one to fetch the randomly chosen entry's details. Don't merge these into a single query.
+
+Each service constructor creates a **private** `CacheService`: in-memory TTL Map (5-min TTL, 60s background sweep, `unref()`'d timer), keyed like `recommendation_${username}` (the `Random*` services cache the fetched ID list first, e.g. `manga_ids_${username}`). Caching is per-process only — nothing persists across restarts.
 
 ### Singletons
 
