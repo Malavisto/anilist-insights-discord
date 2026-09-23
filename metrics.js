@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const client = require('prom-client');
+const client = require('@prometheus-io/client');
 const logger = require('./logger');
 
 // Hash user-supplied values so raw usernames never appear in metrics

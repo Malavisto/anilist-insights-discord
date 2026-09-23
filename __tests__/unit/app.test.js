@@ -325,7 +325,7 @@ describe('AniListDiscordBot', () => {
 
       expect(res.set).toHaveBeenCalledWith(
         'Content-Type',
-        require('prom-client').register.contentType
+        require('@prometheus-io/client').register.contentType
       );
       expect(res.send).toHaveBeenCalledWith('# HELP anilist_bot_commands_total 2');
     });

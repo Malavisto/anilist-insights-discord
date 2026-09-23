@@ -46,7 +46,7 @@ Each service constructor creates a **private** `CacheService`: in-memory TTL Map
 
 Every module requires these two directly:
 
-- `metrics.js` — `MetricsService` singleton over `prom-client`. `trackApiRequest`/`updateUserStats` **sha256-hash usernames** (12 chars) before they enter metric labels — never pass raw usernames into labels. Metric-tracking methods swallow their own errors.
+- `metrics.js` — `MetricsService` singleton over `@prometheus-io/client`. `trackApiRequest`/`updateUserStats` **sha256-hash usernames** (12 chars) before they enter metric labels — never pass raw usernames into labels. Metric-tracking methods swallow their own errors.
 - `logger.js` — winston singleton; JSON logs to `logs/info.log` and `logs/error.log` (runtime artifacts, not source).
 
 ## Testing

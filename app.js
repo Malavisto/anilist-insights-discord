@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits} = require('discord.js');
 const express = require('express');
-const client = require('prom-client');
+const client = require('@prometheus-io/client');
 
 // Import modular services
 const AnimeRecommendationService = require('./modules/animeRecommendation');
