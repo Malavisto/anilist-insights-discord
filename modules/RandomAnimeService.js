@@ -350,12 +350,3 @@ class RandomAnimeService {
 
 module.exports = RandomAnimeService;
 
-
-//        finally {
-//      if (endTimer) {
-//          endTimer(error ? 'failure' : 'success');
-//      }
-//  }
-//
-
-// The above is for future me to impliment
