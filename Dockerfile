@@ -32,4 +32,4 @@ VOLUME ["/usr/src/app/logs"]
 EXPOSE 9090
 
 # Command to run the bot
-CMD ["pnpm", "start"]
+CMD ["node", "app.js"]
