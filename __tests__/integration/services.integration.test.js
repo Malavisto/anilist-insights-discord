@@ -2,6 +2,7 @@ const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const CacheService = require('../../modules/CacheService');
 const RandomAnimeService = require('../../modules/RandomAnimeService');
+const RandomMangaService = require('../../modules/RandomMangaService');
 const AnimeStatsService = require('../../modules/AnimeStatsService');
 
 jest.mock('../../logger', () => ({
@@ -125,6 +126,189 @@ describe('Integration Tests - Service Interactions', () => {
 
       jest.useRealTimers();
       service.cache.destroy();
+    });
+  });
+
+  describe('RandomMangaService with CacheService', () => {
+    test('should utilize cache across multiple calls', async () => {
+      const service = new RandomMangaService();
+      const username = 'testuser';
+      const mangaIds = [1, 5, 10, 15, 20];
+
+      // First call - will hit API and cache manga IDs
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [
+              {
+                entries: mangaIds.map(id => ({ media: { id } }))
+              }
+            ]
+          }
+        }
+      });
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          MediaList: {
+            media: {
+              id: 5,
+              title: { english: 'Manga', romaji: 'マンガ' },
+              chapters: 120,
+              volumes: 8,
+              format: 'MANGA',
+              status: 'FINISHED',
+              genres: [],
+              description: '',
+              averageScore: 80,
+              startDate: { year: 2024 },
+              coverImage: { large: 'url', extraLarge: 'url' }
+            },
+            status: 'COMPLETED',
+            score: 9
+          }
+        }
+      });
+
+      const result1 = await service.fetchRandomManga(username);
+      expect(result1).toBeDefined();
+
+      // Second call - should use cached IDs, only fetch the manga data
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          MediaList: {
+            media: {
+              id: 10,
+              title: { english: 'Manga 2', romaji: 'マンガ2' },
+              chapters: 200,
+              volumes: 12,
+              format: 'MANGA',
+              status: 'FINISHED',
+              genres: [],
+              description: '',
+              averageScore: 85,
+              startDate: { year: 2024 },
+              coverImage: { large: 'url', extraLarge: 'url' }
+            },
+            status: 'COMPLETED',
+            score: 8
+          }
+        }
+      });
+
+      const result2 = await service.fetchRandomManga(username);
+      expect(result2).toBeDefined();
+
+      const metrics = require('../../metrics');
+      expect(metrics.trackCacheHit).toHaveBeenCalledWith('manga_random');
+      // Two fetches = one IDs request + two detail requests, thanks to the cache
+      expect(mockAdapter.history.post.length).toBe(3);
+    });
+
+    test('should handle cache expiration', async () => {
+      const ttl = 500; // Short TTL for testing
+      const service = new RandomMangaService();
+      service.cache = new CacheService(ttl, 'TestCache');
+
+      const username = 'testuser';
+
+      // Set manual cache entry
+      service.cache.set('manga_ids_testuser', [1, 2, 3]);
+
+      // Verify it's there
+      expect(service.cache.get('manga_ids_testuser')).toEqual([1, 2, 3]);
+
+      // Fast forward past TTL
+      jest.useFakeTimers();
+      jest.advanceTimersByTime(ttl + 1);
+
+      // Entry should be expired
+      expect(service.cache.get('manga_ids_testuser')).toBeNull();
+
+      jest.useRealTimers();
+      service.cache.destroy();
+    });
+
+    test('should handle partial API failures gracefully', async () => {
+      const service = new RandomMangaService();
+      const username = 'testuser';
+
+      // First call to fetch IDs succeeds
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [
+              {
+                entries: [{ media: { id: 1 } }, { media: { id: 5 } }]
+              }
+            ]
+          }
+        }
+      });
+
+      // Second call to fetch manga details fails
+      mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
+        errors: [{ message: 'Server error' }]
+      });
+
+      await expect(service.fetchRandomManga(username)).rejects.toThrow();
+    });
+
+    test('should maintain cache consistency during errors', async () => {
+      const metrics = require('../../metrics');
+      const service = new RandomMangaService();
+      const username = 'testuser';
+
+      // First call succeeds and populates the ID cache
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [{ entries: [{ media: { id: 42 } }] }]
+          }
+        }
+      });
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          MediaList: {
+            media: {
+              id: 42,
+              title: { english: 'Test Manga', romaji: 'テスト マンガ' },
+              chapters: 120,
+              volumes: 8,
+              format: 'MANGA',
+              status: 'FINISHED',
+              genres: ['Action'],
+              description: 'A test manga',
+              averageScore: 85,
+              startDate: { year: 2024 },
+              coverImage: {
+                large: 'https://example.com/cover.jpg',
+                extraLarge: 'https://example.com/cover_large.jpg'
+              }
+            },
+            status: 'COMPLETED',
+            score: 9
+          }
+        }
+      });
+
+      const result = await service.fetchRandomManga(username);
+      expect(result.id).toBe(42);
+
+      // Everything fails from now on
+      mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
+        errors: [{ message: 'Server error' }]
+      });
+
+      // Second call serves the cached IDs, then fails on the detail fetch
+      await expect(service.fetchRandomManga(username)).rejects.toThrow();
+      expect(metrics.trackCacheHit).toHaveBeenCalledWith('manga_random');
+
+      // The failed fetch must not have touched the cached IDs
+      expect(service.cache.get('manga_ids_testuser')).toEqual([42]);
     });
   });
 

@@ -14,6 +14,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 ## Features
 
 - Fetches a random anime from an Anilist account.
+- Fetches a random manga from an AniList account.
 - Generates stats from an Anilist Account.
 - Generates a recomendation based on an Anilist account and fetches it.
 - Interactive slash commands with error handling for invalid usernames or empty lists.
@@ -72,6 +73,10 @@ pnpm bot:attach
 ### Random Anime
 1. Use the `/animerandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
+
+### Random Manga
+1. Use the `/mangarandom` command in Discord and provide your AniList username.
+2. The bot will fetch a random manga from your AniList and display its details in an embed.
 
 ### Anime Recomendations
 1. Use the `/animerecommend` command in Discord and provide your AniList username.

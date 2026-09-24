@@ -1,12 +1,13 @@
 const { Client, GatewayIntentBits} = require('discord.js');
 const express = require('express');
-const client = require('prom-client');
+const client = require('@prometheus-io/client');
 
 // Import modular services
 const AnimeRecommendationService = require('./modules/animeRecommendation');
 const RandomAnimeService = require('./modules/RandomAnimeService');
 const AnimeStatsService = require('./modules/AnimeStatsService');
 const AnimeCoverService = require('./modules/AnimeCoverService');
+const RandomMangaService = require('./modules/RandomMangaService')
 const metricsService = require('./metrics');
 
 const logger = require('./logger');
@@ -36,6 +37,7 @@ class AniListDiscordBot {
         this.randomAnimeService = new RandomAnimeService();
         this.animeStatsService = new AnimeStatsService();
         this.animeCoverService = new AnimeCoverService();
+        this.randomMangaService = new RandomMangaService();
 
         this.setupMetricsServer();
 
@@ -136,16 +138,18 @@ class AniListDiscordBot {
             if (!interaction.isChatInputCommand()) return;
 
             // Define services for command handling
-            const randomDef = RandomAnimeService.commandDefinition;
+            const randomAnimeDef = RandomAnimeService.commandDefinition;
             const statsDef = AnimeStatsService.commandDefinition;
             const recommendationDef = AnimeRecommendationService.commandDefinition;
             const coverDef = AnimeCoverService.commandDefinition;
+            const randomMangaDef = RandomMangaService.commandDefinition;
 
             const commandHandlers = {
-                [randomDef.builder.name]: [this.randomAnimeService, randomDef.methodName, randomDef.metricName],
+                [randomAnimeDef.builder.name]: [this.randomAnimeService, randomAnimeDef.methodName, randomAnimeDef.metricName],
+                [randomMangaDef.builder.name]: [this.randomMangaService, randomMangaDef.methodName, randomMangaDef.metricName],
                 [statsDef.builder.name]: [this.animeStatsService, statsDef.methodName, statsDef.metricName],
                 [recommendationDef.builder.name]: [this.recommendationService, recommendationDef.methodName, recommendationDef.metricName],
-                [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName]
+                [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName],
             };
 
             const handler = commandHandlers[interaction.commandName];
@@ -178,12 +182,15 @@ class AniListDiscordBot {
         const commands = [
             // Random anime command
             RandomAnimeService.commandDefinition.builder,
+            // Manga random commanf
+            RandomMangaService.commandDefinition.builder,
             // Anime stats command
             AnimeStatsService.commandDefinition.builder,
             // Anime recommendation command
             AnimeRecommendationService.commandDefinition.builder,
             // Anime cover command
-            AnimeCoverService.commandDefinition.builder
+            AnimeCoverService.commandDefinition.builder,
+            
         ];
 
         // Bulk overwrite replaces existing commands instead of duplicating them

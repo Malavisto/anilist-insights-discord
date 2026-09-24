@@ -1,6 +1,7 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const RandomAnimeService = require('../../modules/RandomAnimeService');
+const RandomMangaService = require('../../modules/RandomMangaService');
 const AnimeRecommendationService = require('../../modules/animeRecommendation');
 const AnimeStatsService = require('../../modules/AnimeStatsService');
 const AnimeCoverService = require('../../modules/AnimeCoverService');
@@ -115,6 +116,161 @@ describe('E2E Tests - Command Interactions', () => {
       }
 
       expect(errorCaught).toBe(true);
+    });
+  });
+
+  describe('/mangarandom command', () => {
+    test('should execute random manga command successfully', async () => {
+      const service = new RandomMangaService();
+      const username = 'testuser';
+
+      // Mock API responses
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [
+              {
+                entries: [
+                  { media: { id: 1 } },
+                  { media: { id: 5 } },
+                  { media: { id: 10 } }
+                ]
+              }
+            ]
+          }
+        }
+      });
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          MediaList: {
+            media: {
+              id: 5,
+              title: {
+                english: 'Berserk',
+                romaji: 'ベルセルク'
+              },
+              chapters: 364,
+              volumes: 41,
+              format: 'MANGA',
+              status: 'RELEASING',
+              genres: ['Action', 'Adventure', 'Drama'],
+              description: 'A story about a lone mercenary',
+              averageScore: 94,
+              startDate: { year: 1990 },
+              coverImage: {
+                large: 'https://example.com/cover.jpg',
+                extraLarge: 'https://example.com/cover_large.jpg'
+              }
+            },
+            status: 'COMPLETED',
+            score: 10
+          }
+        }
+      });
+
+      const result = await service.fetchRandomManga(username);
+
+      // Verify command completed successfully
+      expect(result).toBeDefined();
+      expect(result.id).toBe(5);
+      expect(result.title).toBe('Berserk');
+      expect(result.chapters).toBe(364);
+      expect(result.volumes).toBe(41);
+      expect(result.genres).toContain('Action');
+
+      // Verify no errors
+      const logger = require('../../logger');
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    test('should handle command error gracefully', async () => {
+      const service = new RandomMangaService();
+      const username = 'nonexistent';
+
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
+        data: {
+          User: null,
+          MediaListCollection: { lists: [] }
+        }
+      });
+
+      let errorCaught = false;
+      try {
+        await service.fetchRandomManga(username);
+      } catch (error) {
+        errorCaught = true;
+        expect(error.message).toContain('not found');
+      }
+
+      expect(errorCaught).toBe(true);
+    });
+
+    test('should handle API timeout errors', async () => {
+      const service = new RandomMangaService();
+      const username = 'testuser';
+
+      mockAdapter.onPost('https://graphql.anilist.co').timeoutOnce();
+
+      let errorCaught = false;
+      try {
+        await service.fetchRandomManga(username);
+      } catch (error) {
+        errorCaught = true;
+      }
+
+      expect(errorCaught).toBe(true);
+    });
+
+    test('should track metrics for successful command', async () => {
+      const service = new RandomMangaService();
+      const username = 'testuser';
+      const metrics = require('../../metrics');
+
+      mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
+        data: {
+          User: { id: 1 },
+          MediaListCollection: {
+            lists: [{ entries: [{ media: { id: 1 } }] }]
+          }
+        }
+      });
+
+      mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
+        data: {
+          MediaList: {
+            media: {
+              id: 1,
+              title: { english: 'Test', romaji: 'テスト' },
+              chapters: 10,
+              volumes: 2,
+              format: 'MANGA',
+              status: 'FINISHED',
+              genres: [],
+              description: '',
+              averageScore: 80,
+              seasonYear: 2024,
+              coverImage: { large: 'url', extraLarge: 'url' }
+            },
+            status: 'COMPLETED',
+            score: 9
+          }
+        }
+      });
+
+      try {
+        await service.fetchRandomManga(username);
+      } catch (e) {
+        // Ignore
+      }
+
+      // Verify tracking
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
+        'manga_random',
+        'started',
+        username
+      );
     });
   });
 

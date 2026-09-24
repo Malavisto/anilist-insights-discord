@@ -7,11 +7,11 @@ jest.mock('../../logger', () => ({
   warn: jest.fn()
 }));
 
-// prom-client's global registry is per test file (jest isolates module
+// @prometheus-io/client's global registry is per test file (jest isolates module
 // registries), so other files' jest.mock('../../metrics') are unaffected.
-const client = require('prom-client');
+const client = require('@prometheus-io/client');
 
-// Must run BEFORE requiring metrics.js: prom-client 15's
+// Must run BEFORE requiring metrics.js: @prometheus-io/client 15's
 // collectDefaultMetrics() starts perf_hooks monitors that jest fake timers
 // cannot stop, which would leave the worker with open handles. No-op it.
 jest.spyOn(client, 'collectDefaultMetrics').mockImplementation(() => {});

@@ -5,37 +5,37 @@ const metricsService = require('../metrics');
 const CacheService = require('./CacheService');
 
 // Main Logic
-class RandomAnimeService {   
+class RandomMangaService {   
     constructor() {
-        this.cache = new CacheService(300000, 'RandomAnime');
+        this.cache = new CacheService(300000, 'RandomManga');
     }
 
-    // /animerandom slash-command
+    // /mangarandom slash-command
     static get commandDefinition() {
         return {
             builder: new SlashCommandBuilder()
-                .setName('animerandom')
-                .setDescription('Get a random anime from a user\'s AniList')
+                .setName('mangarandom')
+                .setDescription('Get a random manga from a user\'s AniList')
                 .addStringOption(option =>
                     option.setName('username')
-                        .setDescription('AniList username to fetch anime from')
+                        .setDescription('AniList username to fetch manga from')
                         .setRequired(true)
                 ),
-            methodName: 'handleRandomAnimeCommand',
-            metricName: 'anime_random'
+            methodName: 'handleRandomMangaCommand',
+            metricName: 'manga_random'
         };
     }
 
-    async fetchRandomAnime(username) {
+    async fetchRandomManga(username) {
         try {
-            metricsService.trackApiRequest('anime_random', 'started', username);
+            metricsService.trackApiRequest('manga_random', 'started', username);
 
             const query_ids = `
             query ($username: String) {
                 User(name: $username) {
                     id  # Validate user exists first
                 }
-                MediaListCollection(userName: $username, type: ANIME) {
+                MediaListCollection(userName: $username, type: MANGA) {
                     lists {
                         entries {
                             media {
@@ -48,7 +48,7 @@ class RandomAnimeService {
             }
             `;
 
-            const query_anime = `
+            const query_manga = `
             query ($username: String, $id: Int) {
                 MediaList(userName: $username, mediaId: $id) {
                             media {
@@ -57,13 +57,16 @@ class RandomAnimeService {
                                     english
                                     romaji
                                 }
-                                episodes
+                                chapters
+                                volumes
                                 format
                                 status
                                 genres
                                 description
                                 averageScore
-                                seasonYear
+                                startDate{
+                                    year
+                                }
                                 coverImage {
                                     large
                                     extraLarge
@@ -75,13 +78,13 @@ class RandomAnimeService {
                     }
             `;
 
-            // Check if anime IDs are cached
-            const cacheKey = `anime_ids_${username}`;
+            // Check if manga IDs are cached
+            const cacheKey = `manga_ids_${username}`;
             let allIDs = this.cache.get(cacheKey);
 
             if (allIDs) {
-                metricsService.trackCacheHit('anime_random');
-                metricsService.trackApiRequest('anime_random', 'cache_hit', username);
+                metricsService.trackCacheHit('manga_random');
+                metricsService.trackApiRequest('manga_random', 'cache_hit', username);
             } else {
                 const response_ids = await axios.post('https://graphql.anilist.co',
                     {
@@ -109,16 +112,16 @@ class RandomAnimeService {
             }
 
             if (allIDs.length === 0) {
-                throw new Error(`No anime found in ${username}'s list`);
+                throw new Error(`No manga found in ${username}'s list`);
             }
 
             const randomID = allIDs[Math.floor(Math.random() * allIDs.length)];
 
             const id = randomID;
 
-            const response_anime = await axios.post('https://graphql.anilist.co',
+            const response_manga = await axios.post('https://graphql.anilist.co',
                 {
-                    query: query_anime,
+                    query: query_manga,
                     variables: { username, id }
                 },
                 {
@@ -129,30 +132,31 @@ class RandomAnimeService {
                     }
                 }
             );
-            if (!response_anime.data.data.MediaList) {
-                throw new Error(`No anime data found for user ${username}`);
+            if (!response_manga.data.data.MediaList) {
+                throw new Error(`No manga data found for user ${username}`);
             }
-            metricsService.trackApiRequest('anime_random', 'success', username);
+            metricsService.trackApiRequest('manga_random', 'success', username);
 
-            const randomAnime = response_anime.data.data.MediaList;
+            const randomManga = response_manga.data.data.MediaList;
 
             return {
-                id: randomAnime.media.id,
-                title: randomAnime.media.title.english || randomAnime.media.title.romaji,
-                episodes: randomAnime.media.episodes || 'Unknown',
-                format: randomAnime.media.format,
-                status: randomAnime.status,
-                userScore: randomAnime.score,
-                averageScore: randomAnime.media.averageScore,
-                genres: randomAnime.media.genres,
-                year: randomAnime.media.seasonYear,
-                description: randomAnime.media.description,
-                coverImage: randomAnime.media.coverImage.extraLarge ||
-                    randomAnime.media.coverImage.large ||
+                id: randomManga.media.id,
+                title: randomManga.media.title.english || randomManga.media.title.romaji,
+                chapters: randomManga.media.chapters || 'Unknown',
+                volumes: randomManga.media.volumes || 'Unknown',
+                format: randomManga.media.format,
+                status: randomManga.status,
+                userScore: randomManga.score,
+                averageScore: randomManga.media.averageScore,
+                genres: randomManga.media.genres,
+                year: randomManga.media.startDate?.year,
+                description: randomManga.media.description,
+                coverImage: randomManga.media.coverImage.extraLarge ||
+                    randomManga.media.coverImage.large ||
                     null
             };
         } catch (error) {
-            logger.error('Anime fetch failed', {
+            logger.error('Manga fetch failed', {
                 username,
                 errorMessage: error.message,
                 errorStack: error.stack
@@ -161,24 +165,25 @@ class RandomAnimeService {
         }
     }
 
-    createAnimeEmbed(anime) {
+    createMangaEmbed(manga) {
         // Clean up description 
-        const cleanDescription = anime.description
-            ? anime.description
+        const cleanDescription = manga.description
+            ? manga.description
                 .replace(/<\/?[^>]+(>|$)/g, '')
                 .replace(/\s+/g, ' ')
                 .trim()
             : 'No description available';
 
-        // Direct link to the specific anime page using its ID
-        const animeDirectLink = `https://anilist.co/anime/${anime.id}`;
+        // Direct link to the specific manga page using its ID
+        const mangaDirectLink = `https://anilist.co/manga/${manga.id}`;
 
         // Emoji mapping for different statuses and formats
         const statusEmojis = {
-            'FINISHED': '✅',
-            'RELEASING': '🔴',
+            'COMPLETED': '✅',
+            'CURRENT': '📰',
             'NOT_YET_RELEASED': '⏳',
-            'CANCELLED': '❌'
+            'CANCELLED': '❌',
+            "PAUSED": '⏸️'
         };
 
         const formatEmojis = {
@@ -188,13 +193,14 @@ class RandomAnimeService {
             'SPECIAL': '⭐',
             'MUSIC': '🎵',
             'ONA': '💻',
-            'MANGA': '📖'
+            'MANGA': '📖',
+            'NOVEL': '📓'
         };
 
         const embedBuilder = new EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle(`🌟 ${anime.title}`)
-            .setURL(animeDirectLink)
+            .setTitle(`🌟 ${manga.title}`)
+            .setURL(mangaDirectLink)
             .setDescription(
                 `📝 ${cleanDescription.length > 200
                     ? cleanDescription.substring(0, 200) + '...'
@@ -203,39 +209,44 @@ class RandomAnimeService {
             .addFields(
                 {
                     name: '📡 Status',
-                    value: `${statusEmojis[anime.status] || '❓'} ${anime.status}`,
+                    value: `${statusEmojis[manga.status] || '❓'} ${manga.status}`,
                     inline: true
                 },
                 {
-                    name: '🎞️ Episodes',
-                    value: `🔢 ${anime.episodes.toString()}`,
+                    name: '📚 Volumes',
+                    value: `🔢 ${manga.volumes.toString()}`,
+                    inline: true
+                },
+                {
+                    name: '📖 Chapters',
+                    value: `🔢 ${manga.chapters.toString()}`,
                     inline: true
                 },
                 {
                     name: '🎭 Format',
-                    value: `${formatEmojis[anime.format] || '🎴'} ${anime.format}`,
+                    value: `${formatEmojis[manga.format] || '🎴'} ${manga.format}`,
                     inline: true
                 },
                 {
                     name: '📅 Year',
-                    value: `🗓️ ${anime.year?.toString() || 'Unknown'}`,
+                    value: `🗓️ ${manga.year?.toString() || 'Unknown'}`,
                     inline: true
                 },
                 {
                     name: '🏷️ Genres',
-                    value: anime.genres.length > 0
-                        ? anime.genres.map(genre => `#${genre}`).join(' ')
+                    value: manga.genres.length > 0
+                        ? manga.genres.map(genre => `#${genre}`).join(' ')
                         : 'No genres',
                     inline: false
                 },
                 {
                     name: '⭐ Your Score',
-                    value: `📊 ${anime.userScore?.toString() || 'Not rated'}`,
+                    value: `📊 ${manga.userScore?.toString() || 'Not rated'}`,
                     inline: true
                 },
                 {
                     name: '📈 Average Score',
-                    value: `🌈 ${anime.averageScore || 'N/A'}%`,
+                    value: `🌈 ${manga.averageScore || 'N/A'}%`,
                     inline: true
                 }
             )
@@ -244,8 +255,8 @@ class RandomAnimeService {
             });
 
         // Add thumbnail only if a valid image URL exists
-        if (anime.coverImage && this.isValidHttpUrl(anime.coverImage)) {
-            embedBuilder.setImage(anime.coverImage);
+        if (manga.coverImage && this.isValidHttpUrl(manga.coverImage)) {
+            embedBuilder.setImage(manga.coverImage);
         }
 
         return embedBuilder;
@@ -260,7 +271,7 @@ class RandomAnimeService {
         }
     }
 
-    async handleRandomAnimeCommand(interaction) {
+    async handleRandomMangaCommand(interaction) {
         // Declared out here so the last-resort catch can still reference it
         // when deferReply fails before the assignment runs
         let username;
@@ -281,9 +292,9 @@ class RandomAnimeService {
             }
 
             try {
-                const randomAnime = await this.fetchRandomAnime(username);
+                const randomManga = await this.fetchRandomManga(username);
 
-                const embed = this.createAnimeEmbed(randomAnime);
+                const embed = this.createMangaEmbed(randomManga);
 
                 await interaction.editReply({
                     embeds: [embed],
@@ -291,7 +302,7 @@ class RandomAnimeService {
                 });
 
             } catch (fetchError) {
-                logger.error('Anime command processing error', {
+                logger.error('Manga command processing error', {
                     username,
                     errorMessage: fetchError.message,
                     errorStack: fetchError.stack
@@ -299,9 +310,9 @@ class RandomAnimeService {
 
                 // Guaranteed response to prevent "thinking" state
                 await interaction.editReply({
-                    content: `❌ Error fetching anime for ${username}. Possible reasons:
+                    content: `❌ Error fetching manga for ${username}. Possible reasons:
         - Invalid AniList username
-        - Empty anime list
+        - Empty manga list
         - AniList API temporarily unavailable
         - Network connectivity issues`
                 });
@@ -310,7 +321,7 @@ class RandomAnimeService {
 
         } catch (globalError) {
             // Last-resort error handling
-            logger.error('Critical error in anime command', {
+            logger.error('Critical error in manga command', {
                 errorMessage: globalError.message,
                 errorStack: globalError.stack
             });
@@ -335,8 +346,8 @@ class RandomAnimeService {
             }
             catch (replyError) {
                 // If all else fails, log the error
-                metricsService.trackError(globalError.name || 'unknown_error', 'anime_random');
-                metricsService.trackApiRequest('anime_random', 'failure', username);
+                metricsService.trackError(globalError.name || 'unknown_error', 'manga_random');
+                metricsService.trackApiRequest('manga_random', 'failure', username);
                 logger.error('Failed to send final error message', {
                     originalError: globalError,
                     replyError
@@ -348,5 +359,5 @@ class RandomAnimeService {
 }
 
 
-module.exports = RandomAnimeService;
+module.exports = RandomMangaService;
 
