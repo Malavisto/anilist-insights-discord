@@ -7,7 +7,7 @@ const AnimeRecommendationService = require('./modules/animeRecommendation');
 const RandomAnimeService = require('./modules/RandomAnimeService');
 const AnimeStatsService = require('./modules/AnimeStatsService');
 const AnimeCoverService = require('./modules/AnimeCoverService');
-const RandomMangaService = require('./modules/RandomMangaService')
+const RandomMangaService = require('./modules/RandomMangaService');
 const metricsService = require('./metrics');
 
 const logger = require('./logger');
@@ -28,16 +28,24 @@ class AniListDiscordBot {
         logger.info('AniListDiscordBot initialized');
 
         // Discord bot token
-        this.TOKEN = dis_token;
+        this.TOKEN = token;
         this.httpServer = null;
         this.isShuttingDown = false;
 
-        // Initialize services
-        this.recommendationService = new AnimeRecommendationService();
-        this.randomAnimeService = new RandomAnimeService();
-        this.animeStatsService = new AnimeStatsService();
-        this.animeCoverService = new AnimeCoverService();
-        this.randomMangaService = new RandomMangaService();
+        // One registry drives service construction, registration, and dispatch.
+        const serviceTypes = [
+            ['randomAnimeService', RandomAnimeService],
+            ['randomMangaService', RandomMangaService],
+            ['animeStatsService', AnimeStatsService],
+            ['recommendationService', AnimeRecommendationService],
+            ['animeCoverService', AnimeCoverService]
+        ];
+        this.commands = new Map(serviceTypes.map(([property, Service]) => {
+            const service = new Service();
+            this[property] = service;
+            const definition = Service.commandDefinition;
+            return [definition.builder.name, { service, ...definition }];
+        }));
 
         this.setupMetricsServer();
 
@@ -79,9 +87,7 @@ class AniListDiscordBot {
             logger.info(`Received ${signal}, shutting down`);
 
             try {
-                if (this.client.isReady()) {
-                    this.client.destroy();
-                }
+                await this.client.destroy();
 
                 if (this.httpServer) {
                     await new Promise((resolve) => this.httpServer.close(resolve));
@@ -128,6 +134,18 @@ class AniListDiscordBot {
             }
         });
 
+        // New guilds need commands immediately, without a bot restart.
+        this.client.on('guildCreate', async (guild) => {
+            try {
+                await this.registerSlashCommands(guild);
+            } catch (error) {
+                logger.error(`Failed to register commands for guild ${guild.id}`, {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+        });
+
         // Error handling
         this.client.on('error', (error) => {
             logger.error('Discord client error', { error });
@@ -137,25 +155,10 @@ class AniListDiscordBot {
         this.client.on('interactionCreate', async (interaction) => {
             if (!interaction.isChatInputCommand()) return;
 
-            // Define services for command handling
-            const randomAnimeDef = RandomAnimeService.commandDefinition;
-            const statsDef = AnimeStatsService.commandDefinition;
-            const recommendationDef = AnimeRecommendationService.commandDefinition;
-            const coverDef = AnimeCoverService.commandDefinition;
-            const randomMangaDef = RandomMangaService.commandDefinition;
+            const handler = this.commands.get(interaction.commandName);
+            if (!handler) return;
 
-            const commandHandlers = {
-                [randomAnimeDef.builder.name]: [this.randomAnimeService, randomAnimeDef.methodName, randomAnimeDef.metricName],
-                [randomMangaDef.builder.name]: [this.randomMangaService, randomMangaDef.methodName, randomMangaDef.metricName],
-                [statsDef.builder.name]: [this.animeStatsService, statsDef.methodName, statsDef.metricName],
-                [recommendationDef.builder.name]: [this.recommendationService, recommendationDef.methodName, recommendationDef.metricName],
-                [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName],
-            };
-
-            const handler = commandHandlers[interaction.commandName];
-            if (!handler) return; // Unknown command - nothing to do
-
-            const [service, methodName, metricName] = handler;
+            const { service, methodName, metricName } = handler;
             let endTimer;
             let failed = false;
             try {
@@ -179,19 +182,7 @@ class AniListDiscordBot {
     }
 
     async registerSlashCommands(guild) {
-        const commands = [
-            // Random anime command
-            RandomAnimeService.commandDefinition.builder,
-            // Manga random commanf
-            RandomMangaService.commandDefinition.builder,
-            // Anime stats command
-            AnimeStatsService.commandDefinition.builder,
-            // Anime recommendation command
-            AnimeRecommendationService.commandDefinition.builder,
-            // Anime cover command
-            AnimeCoverService.commandDefinition.builder,
-            
-        ];
+        const commands = Array.from(this.commands.values(), command => command.builder);
 
         // Bulk overwrite replaces existing commands instead of duplicating them
         await guild.commands.set(commands.map(command => command.toJSON()));

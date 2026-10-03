@@ -162,6 +162,12 @@ describe('AniListDiscordBot', () => {
       expect(mockClient.login).toHaveBeenCalledWith('test-token');
     });
 
+    test('uses the supplied token instead of the environment token', () => {
+      new AniListDiscordBot('explicit-token');
+
+      expect(mockClient.login).toHaveBeenLastCalledWith('explicit-token');
+    });
+
     test('registers process handlers for SIGINT, SIGTERM and unhandledRejection', () => {
       const events = process.on.mock.calls.map(([event]) => event);
 
@@ -180,6 +186,28 @@ describe('AniListDiscordBot', () => {
       expect(commands.map(command => command.name)).toEqual([
         'animerandom', 'mangarandom', 'animestats', 'animerecommend', 'animecover'
       ]);
+    });
+
+    test('registers and dispatches a command added to the shared registry', async () => {
+      const { SlashCommandBuilder } = require('discord.js');
+      const service = { handleExtra: jest.fn().mockResolvedValue(undefined) };
+      bot.commands.set('extra', {
+        builder: new SlashCommandBuilder().setName('extra').setDescription('Extra command'),
+        service,
+        methodName: 'handleExtra',
+        metricName: 'extra_metric'
+      });
+      const guild = { id: 'g1', commands: { set: jest.fn().mockResolvedValue(undefined) } };
+
+      await bot.registerSlashCommands(guild);
+      const interaction = createMockInteraction({ commandName: 'extra' });
+      await handlerFor(mockClient.on, 'interactionCreate')(interaction);
+
+      expect(guild.commands.set).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ name: 'extra' })
+      ]));
+      expect(service.handleExtra).toHaveBeenCalledWith(interaction);
+      expect(require('../../metrics').trackCommand).toHaveBeenCalledWith('extra_metric', 'guild-123');
     });
 
     test('logs the registered command count for the guild', async () => {
@@ -322,6 +350,31 @@ describe('AniListDiscordBot', () => {
     });
   });
 
+  describe('guildCreate handler', () => {
+    test('registers commands when the bot joins a new guild', async () => {
+      const guild = { id: 'new-guild', commands: { set: jest.fn().mockResolvedValue(undefined) } };
+
+      await handlerFor(mockClient.on, 'guildCreate')(guild);
+
+      expect(guild.commands.set).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ name: 'animerandom' }),
+        expect.objectContaining({ name: 'mangarandom' })
+      ]));
+      expect(guild.commands.set.mock.calls[0][0]).toHaveLength(5);
+    });
+
+    test('logs registration failures without rejecting the event handler', async () => {
+      const guild = { id: 'new-guild', commands: { set: jest.fn().mockRejectedValue(new Error('missing access')) } };
+
+      await expect(handlerFor(mockClient.on, 'guildCreate')(guild)).resolves.toBeUndefined();
+
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to register commands for guild new-guild',
+        expect.objectContaining({ error: 'missing access' })
+      );
+    });
+  });
+
   describe('/metrics endpoint', () => {
     const metricsRoute = () => {
       const found = mockApp.get.mock.calls.find(([path]) => path === '/metrics');
@@ -385,12 +438,29 @@ describe('AniListDiscordBot', () => {
       expect(process.exit).toHaveBeenCalledTimes(1);
     });
 
-    test('skips destroying a client that is not ready', async () => {
+    test('destroys a client that is not ready', async () => {
       mockClient.isReady.mockReturnValue(false);
 
       await handlerFor(process.on, 'SIGINT')('SIGINT');
 
-      expect(mockClient.destroy).not.toHaveBeenCalled();
+      expect(mockClient.destroy).toHaveBeenCalledTimes(1);
+      expect(process.exit).toHaveBeenCalledWith(0);
+    });
+
+    test('waits for Discord cleanup before closing the server and exiting', async () => {
+      let finishDestroy;
+      mockClient.destroy.mockImplementationOnce(() => new Promise(resolve => {
+        finishDestroy = resolve;
+      }));
+
+      const shutdown = handlerFor(process.on, 'SIGINT')();
+      expect(mockServer.close).not.toHaveBeenCalled();
+      expect(process.exit).not.toHaveBeenCalled();
+
+      finishDestroy();
+      await shutdown;
+
+      expect(mockServer.close).toHaveBeenCalledTimes(1);
       expect(process.exit).toHaveBeenCalledWith(0);
     });
 
