@@ -25,12 +25,13 @@ Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-m
 
 ### Command wiring (key cross-file invariant)
 
-`app.js` owns **both halves** of every slash command, and they must stay in sync:
-
-1. `registerSlashCommands(guild)` — builds the command list from each service's static `commandDefinition.builder`, registered per-guild on client ready via bulk overwrite (`guild.commands.set`).
-2. The `interactionCreate` handler dispatches through a `commandHandlers` map of `{ commandName: [serviceInstance, methodName, metricName] }`, keyed off the same `commandDefinition`.
-
-Each service owns a static `commandDefinition` getter (`{ builder, methodName, metricName }`) that is the single source of truth for its command name, handler method, and metric — but `app.js` still lists every service explicitly in **both** places, so they must stay in sync by hand. Adding/renaming a command means adding/updating the `commandDefinition` in the service in `modules/`, then referencing it in both places in `app.js`. The dispatcher wraps each call in `metricsService.trackCommand(...)`, invoking the returned end-timer with `'success'`/`'failure'` in a `finally` block.
+`app.js` constructs one `commands` Map from the service types in its constructor.
+Each service owns a static `commandDefinition` getter (`{ builder, methodName,
+metricName }`). The same registry supplies both per-guild bulk registration and
+interaction dispatch, so adding a command requires adding its service type only
+once. Commands register on client ready and when the bot joins a new guild.
+The dispatcher wraps each call in `metricsService.trackCommand(...)`, invoking
+the returned end-timer with `'success'`/`'failure'` in a `finally` block.
 
 ### Service pattern (`modules/`)
 
