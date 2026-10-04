@@ -34,9 +34,6 @@ class CacheService {
     this.stats.sets++;
     logger.debug(`[Cache:${this.name}] SET: ${key} (Total keys: ${this.cache.size})`);
 
-    // Opportunistic cleanup
-    this.sweepExpired();
-
     return value;
   }
 
@@ -56,9 +53,6 @@ class CacheService {
       logger.debug(`[Cache:${this.name}] EXPIRED: ${key} (TTL: ${this.ttl}ms)`);
       return null;
     }
-
-    // Opportunistic cleanup
-    this.sweepExpired();
 
     this.stats.hits++;
     logger.debug(`[Cache:${this.name}] HIT: ${key} (Hit ratio: ${this.getHitRatio()}%)`);
