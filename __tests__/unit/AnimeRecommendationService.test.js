@@ -31,6 +31,81 @@ describe('AnimeRecommendationService', () => {
     mockAdapter.reset();
   });
 
+  describe('recommendation pagination', () => {
+    const listed = { id: 1, genres: ['Action'] };
+    const candidate = {
+      id: 2,
+      title: { english: 'New anime' },
+      genres: ['Action'],
+      episodes: 12,
+      coverImage: { large: 'https://example.com/cover.jpg' },
+    };
+    beforeEach(() => {
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          MediaListCollection: {
+            lists: [{ entries: [{ score: 9, media: listed }] }],
+          },
+        },
+      });
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: [listed],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      });
+    });
+
+    test('finds an unseen title on a later page and caches it', async () => {
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: [listed, candidate],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      });
+      const result = await service.fetchAnimeRecommendation('testuser');
+      expect(result.id).toBe(2);
+      const pages = mockAdapter.history.post
+        .slice(1)
+        .map((request) => JSON.parse(request.data).variables.page);
+      expect(pages).toEqual([1, 2]);
+      expect(
+        require('../../modules/observability/metrics').trackApiRequest.mock.calls.map(
+          (call) => call[1],
+        ),
+      ).toEqual(['started', 'success', 'started', 'success', 'started', 'success']);
+      expect(await service.fetchAnimeRecommendation('testuser')).toEqual(result);
+      expect(mockAdapter.history.post).toHaveLength(3);
+    });
+
+    test('stops when the final page has no unseen titles', async () => {
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: [listed],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      });
+      await expect(service.fetchAnimeRecommendation('testuser')).rejects.toThrow(
+        'No unique recommendations found',
+      );
+      expect(mockAdapter.history.post).toHaveLength(3);
+      expect(service.cache.get('recommendation_testuser')).toBeNull();
+    });
+
+    test('propagates later-page failures without caching a result', async () => {
+      mockAdapter.onPost().replyOnce(500);
+      await expect(service.fetchAnimeRecommendation('testuser')).rejects.toThrow();
+      expect(mockAdapter.history.post).toHaveLength(3);
+      expect(service.cache.get('recommendation_testuser')).toBeNull();
+    });
+  });
+
   describe('fetchAnimeRecommendation', () => {
     test('should fetch recommendations based on user anime list', async () => {
       const username = 'testuser';

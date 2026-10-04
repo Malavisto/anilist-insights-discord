@@ -86,8 +86,11 @@ class AnimeRecommendationService {
 
       // Second query to find recommendations based on genres
       const recommendationQuery = `
-            query ($genres: [String]) {
-                Page(page: 1, perPage: 5) {
+            query ($genres: [String], $page: Int) {
+                Page(page: $page, perPage: 5) {
+                    pageInfo {
+                        hasNextPage
+                    }
                     media(
                         genre_in: $genres,
                         type: ANIME,
@@ -114,25 +117,26 @@ class AnimeRecommendationService {
             }
             `;
 
-      const recommendationResponse = await anilistRequest(
-        recommendationQuery,
-        { genres: genresOfInterest },
-        'recommendation',
-        username,
-      );
-
-      const recommendedAnimes = recommendationResponse.data.data.Page.media;
-
-      // Filter out anime that are already in the user's list
-      const uniqueRecommendations = recommendedAnimes
-        .filter((recommended) => !allEntries.some((entry) => entry.media.id === recommended.id))
-        .slice(0, 5); // Limit to 5 unique recommendations
+      const listedIds = new Set(allEntries.map((entry) => entry.media.id));
+      let uniqueRecommendations = [];
+      let page = 1;
+      // Continue past already-listed candidates until a page provides new titles.
+      while (uniqueRecommendations.length === 0) {
+        const recommendationResponse = await anilistRequest(
+          recommendationQuery,
+          { genres: genresOfInterest, page },
+          'recommendation',
+          username,
+        );
+        const result = recommendationResponse.data.data.Page;
+        uniqueRecommendations = result.media.filter((anime) => !listedIds.has(anime.id));
+        if (uniqueRecommendations.length > 0 || !result.pageInfo?.hasNextPage) break;
+        page++;
+      }
 
       if (uniqueRecommendations.length === 0) {
         throw new Error('No unique recommendations found');
       }
-
-      // Track successful API request after all validations complete
 
       // Select a random recommendation from the available range
       const randomIndex = Math.floor(Math.random() * uniqueRecommendations.length);
