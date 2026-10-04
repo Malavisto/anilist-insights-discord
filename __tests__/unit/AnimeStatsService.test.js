@@ -229,6 +229,38 @@ describe('AnimeStatsService', () => {
     });
   });
 
+  test('uses statuses, deduplicates custom lists, and includes rewatching anime', async () => {
+    const completed = { mediaId: 1, status: 'COMPLETED', score: 80 };
+    mockAdapter.onPost().reply(200, {
+      data: {
+        User: { id: 1 },
+        MediaListCollection: {
+          lists: [
+            { name: 'Finished shows', entries: [completed] },
+            {
+              name: 'Favorites',
+              entries: [completed, { mediaId: 2, status: 'REPEATING', score: 100 }],
+            },
+          ],
+        },
+      },
+    });
+    const stats = await service.fetchUserAnimeStats('testuser');
+    expect(stats).toMatchObject({
+      totalAnime: 2,
+      completedAnime: 1,
+      watchingAnime: 1,
+      averageScore: '90.00',
+    });
+    await service.fetchUserAnimeStats('testuser');
+    expect(mockAdapter.history.post).toHaveLength(1);
+    expect(
+      require('../../modules/observability/metrics').trackApiRequest.mock.calls.map(
+        (call) => call[1],
+      ),
+    ).toEqual(['started', 'success']);
+  });
+
   describe('handleAnimeStatsCommand', () => {
     const mockStatsResponse = {
       data: {

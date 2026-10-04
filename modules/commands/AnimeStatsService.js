@@ -46,6 +46,7 @@ class AnimeStatsService {
                 MediaListCollection(userName: $username, type: ANIME) {
                     lists {
                         entries {
+                            mediaId
                             status
                             score
                             media {
@@ -64,29 +65,23 @@ class AnimeStatsService {
 
       const lists = response.data.data.MediaListCollection.lists;
 
-      // Define status categories
-      const statusCategories = {
-        Completed: lists.find((list) => list.name === 'Completed')?.entries || [],
-        Watching: lists.find((list) => list.name === 'Watching')?.entries || [],
-        Paused: lists.find((list) => list.name === 'Paused')?.entries || [],
-        Dropped: lists.find((list) => list.name === 'Dropped')?.entries || [],
-        Planning: lists.find((list) => list.name === 'Planning')?.entries || [],
-      };
-
-      // Calculate statistics
+      // Custom lists can repeat entries; media IDs identify unique anime.
+      const entriesById = new Map();
+      for (const entry of lists.flatMap((list) => list.entries)) {
+        entriesById.set(entry.mediaId ?? entry, entry);
+      }
+      const allEntries = [...entriesById.values()];
+      const countStatus = (...statuses) =>
+        allEntries.filter((entry) => statuses.includes(entry.status)).length;
       const stats = {
-        totalAnime: 0,
-        completedAnime: statusCategories['Completed'].length,
-        watchingAnime: statusCategories['Watching'].length,
-        pausedAnime: statusCategories['Paused'].length,
-        droppedAnime: statusCategories['Dropped'].length,
-        planningAnime: statusCategories['Planning'].length,
+        totalAnime: allEntries.length,
+        completedAnime: countStatus('COMPLETED'),
+        watchingAnime: countStatus('CURRENT', 'REPEATING'),
+        pausedAnime: countStatus('PAUSED'),
+        droppedAnime: countStatus('DROPPED'),
+        planningAnime: countStatus('PLANNING'),
         averageScore: 0,
       };
-
-      // Collect all anime entries for scoring
-      const allEntries = Object.values(statusCategories).flat();
-      stats.totalAnime = allEntries.length;
 
       // Calculate the user's own average score (unrated entries score 0)
       const validScores = allEntries
