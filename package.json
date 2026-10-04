@@ -3,7 +3,7 @@
   "version": "1.4.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "bun app.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:unit": "jest --testPathPatterns=unit",
@@ -23,7 +23,6 @@
     "@prometheus-io/client": "^0.16.1",
     "axios": "^1.15.0",
     "discord.js": "^14.27.0",
-    "dotenv": "^18.0.0",
     "express": "^5.2.1",
     "winston": "^3.19.0"
   },
@@ -31,6 +30,5 @@
     "@types/jest": "^30.0.0",
     "axios-mock-adapter": "^2.0.0",
     "jest": "^30.0.0"
-  },
-  "packageManager": "pnpm@12.6.0"
+  }
 }

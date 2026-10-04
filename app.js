@@ -11,7 +11,6 @@ const RandomMangaService = require('./modules/RandomMangaService')
 const metricsService = require('./metrics');
 
 const logger = require('./logger');
-require('dotenv').config();
 
 const dis_token = process.env.DISCORD_TOKEN;
 
