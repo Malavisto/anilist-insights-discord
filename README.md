@@ -2,7 +2,6 @@
 
 A Discord bot that connects with [AniList](https://anilist.co/) to do multiple tasks based on a user's AniList profile.
 
-
 ## Disclaimers
 
 This project was made as an testing ground for [me](https://github.com/malavisto) to experiment with AI, I do try to maintain the repo on my own though
@@ -26,7 +25,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 
 1. [Node.js](https://nodejs.org/) version 24 with nvm or later installed or [Docker](https://www.docker.com/) with docker compose.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
-4. Install dependencies **NodeJS Only**:
+3. Install dependencies **NodeJS Only**:
    ```
    pnpm install
    ```
@@ -50,7 +49,9 @@ Start the bot by running:
 ```
 pnpm start
 ```
-or 
+
+or
+
 ```
 docker compose up -d
 ```
@@ -71,25 +72,29 @@ pnpm bot:attach
 ## Usage
 
 ### Random Anime
+
 1. Use the `/animerandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
 
 ### Random Manga
+
 1. Use the `/mangarandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random manga from your AniList and display its details in an embed.
 
 ### Anime Recomendations
+
 1. Use the `/animerecommend` command in Discord and provide your AniList username.
 2. The bot generate recomendations based on your anilist and pick one out of five anime and display its details in an embed.
 
 ### Anime Stats
+
 1. Use the `/animestats` command in Discord and provide your AniList username.
 2. The bot will generate stats from your AniList and display them an embed.
 
 ### Anime Cover (Not used much)
+
 1. Use the `/animecover` command in discord and provide an AniList anime ID
 2. The bot will fetch the cover and serve an embed with the link
-
 
 ## Development
 
@@ -97,7 +102,7 @@ pnpm bot:attach
 
 1. [Node.js](https://nodejs.org/) version 24 or later installed.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
-4. Install dependencies:
+3. Install dependencies:
    ```
    pnpm install
    ```

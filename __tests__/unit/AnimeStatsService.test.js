@@ -7,14 +7,14 @@ jest.mock('../../logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
 jest.mock('../../metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
-  trackCommand: jest.fn(() => jest.fn())
+  trackCommand: jest.fn(() => jest.fn()),
 }));
 
 describe('AnimeStatsService', () => {
@@ -44,32 +44,28 @@ describe('AnimeStatsService', () => {
                 name: 'Completed',
                 entries: [
                   { status: 'COMPLETED', score: 85, media: { averageScore: 85 } },
-                  { status: 'COMPLETED', score: 90, media: { averageScore: 90 } }
-                ]
+                  { status: 'COMPLETED', score: 90, media: { averageScore: 90 } },
+                ],
               },
               {
                 name: 'Watching',
-                entries: [
-                  { status: 'CURRENT', score: 80, media: { averageScore: 80 } }
-                ]
+                entries: [{ status: 'CURRENT', score: 80, media: { averageScore: 80 } }],
               },
               {
                 name: 'Paused',
-                entries: []
+                entries: [],
               },
               {
                 name: 'Dropped',
-                entries: []
+                entries: [],
               },
               {
                 name: 'Planning',
-                entries: [
-                  { status: 'PLANNING', score: 75, media: { averageScore: 75 } }
-                ]
-              }
-            ]
-          }
-        }
+                entries: [{ status: 'PLANNING', score: 75, media: { averageScore: 75 } }],
+              },
+            ],
+          },
+        },
       });
 
       const stats = await service.fetchUserAnimeStats(username);
@@ -96,10 +92,10 @@ describe('AnimeStatsService', () => {
               { name: 'Watching', entries: [] },
               { name: 'Paused', entries: [] },
               { name: 'Dropped', entries: [] },
-              { name: 'Planning', entries: [] }
-            ]
-          }
-        }
+              { name: 'Planning', entries: [] },
+            ],
+          },
+        },
       });
 
       const stats = await service.fetchUserAnimeStats(username);
@@ -121,16 +117,16 @@ describe('AnimeStatsService', () => {
                 name: 'Completed',
                 entries: [
                   { status: 'COMPLETED', score: 0, media: { averageScore: null } },
-                  { status: 'COMPLETED', score: 80, media: { averageScore: 80 } }
-                ]
+                  { status: 'COMPLETED', score: 80, media: { averageScore: 80 } },
+                ],
               },
               { name: 'Watching', entries: [] },
               { name: 'Paused', entries: [] },
               { name: 'Dropped', entries: [] },
-              { name: 'Planning', entries: [] }
-            ]
-          }
-        }
+              { name: 'Planning', entries: [] },
+            ],
+          },
+        },
       });
 
       const stats = await service.fetchUserAnimeStats(username);
@@ -150,18 +146,18 @@ describe('AnimeStatsService', () => {
             lists: [
               {
                 name: 'Completed',
-                entries: Array(5).fill({ status: 'COMPLETED', media: { averageScore: 85 } })
+                entries: Array(5).fill({ status: 'COMPLETED', media: { averageScore: 85 } }),
               },
               {
                 name: 'Watching',
-                entries: Array(3).fill({ status: 'CURRENT', media: { averageScore: 80 } })
+                entries: Array(3).fill({ status: 'CURRENT', media: { averageScore: 80 } }),
               },
               { name: 'Paused', entries: [{ status: 'PAUSED', media: { averageScore: 75 } }] },
               { name: 'Dropped', entries: [{ status: 'DROPPED', media: { averageScore: 60 } }] },
-              { name: 'Planning', entries: [] }
-            ]
-          }
-        }
+              { name: 'Planning', entries: [] },
+            ],
+          },
+        },
       });
 
       const firstResult = await service.fetchUserAnimeStats(username);
@@ -180,13 +176,11 @@ describe('AnimeStatsService', () => {
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           User: null,
-          MediaListCollection: { lists: [] }
-        }
+          MediaListCollection: { lists: [] },
+        },
       });
 
-      await expect(service.fetchUserAnimeStats(username)).rejects.toThrow(
-        'not found on AniList'
-      );
+      await expect(service.fetchUserAnimeStats(username)).rejects.toThrow('not found on AniList');
     });
 
     test('should track API requests', async () => {
@@ -202,10 +196,10 @@ describe('AnimeStatsService', () => {
               { name: 'Watching', entries: [] },
               { name: 'Paused', entries: [] },
               { name: 'Dropped', entries: [] },
-              { name: 'Planning', entries: [] }
-            ]
-          }
-        }
+              { name: 'Planning', entries: [] },
+            ],
+          },
+        },
       });
 
       try {
@@ -214,11 +208,7 @@ describe('AnimeStatsService', () => {
         // Ignore
       }
 
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'anime_stats',
-        'started',
-        username
-      );
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_stats', 'started', username);
     });
     test('does not track success when the user does not exist', async () => {
       const metrics = require('../../metrics');
@@ -226,14 +216,14 @@ describe('AnimeStatsService', () => {
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           User: null,
-          MediaListCollection: { lists: [] }
-        }
+          MediaListCollection: { lists: [] },
+        },
       });
 
       await expect(service.fetchUserAnimeStats('testuser')).rejects.toThrow('not found on AniList');
 
       const successCalls = metrics.trackApiRequest.mock.calls.filter(
-        call => call[1] === 'success'
+        (call) => call[1] === 'success',
       );
       expect(successCalls).toHaveLength(0);
     });
@@ -245,14 +235,17 @@ describe('AnimeStatsService', () => {
         User: { id: 1, name: 'testuser' },
         MediaListCollection: {
           lists: [
-            { name: 'Completed', entries: [{ status: 'COMPLETED', score: 85, media: { averageScore: 85 } }] },
+            {
+              name: 'Completed',
+              entries: [{ status: 'COMPLETED', score: 85, media: { averageScore: 85 } }],
+            },
             { name: 'Watching', entries: [] },
             { name: 'Paused', entries: [] },
             { name: 'Dropped', entries: [] },
-            { name: 'Planning', entries: [] }
-          ]
-        }
-      }
+            { name: 'Planning', entries: [] },
+          ],
+        },
+      },
     };
 
     test('should defer then edit the reply with the stats embed on success', async () => {
@@ -271,13 +264,13 @@ describe('AnimeStatsService', () => {
     test('should ask for a username when the option is missing', async () => {
       const interaction = createMockInteraction({
         commandName: 'animestats',
-        options: { getString: jest.fn().mockReturnValue(undefined) }
+        options: { getString: jest.fn().mockReturnValue(undefined) },
       });
 
       await service.handleAnimeStatsCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: '❌ Please provide a valid AniList username.'
+        content: '❌ Please provide a valid AniList username.',
       });
       expect(mockAdapter.history.post.length).toBe(0);
     });
@@ -289,14 +282,14 @@ describe('AnimeStatsService', () => {
       await service.handleAnimeStatsCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: expect.stringContaining('❌ Error fetching anime stats for testuser')
+        content: expect.stringContaining('❌ Error fetching anime stats for testuser'),
       });
     });
 
     test('should fall back to reply() when deferReply itself fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'animestats',
-        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction'))
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
       });
 
       await service.handleAnimeStatsCommand(interaction);
@@ -304,8 +297,8 @@ describe('AnimeStatsService', () => {
       expect(interaction.reply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining('An unexpected error occurred'),
-          ephemeral: true
-        })
+          ephemeral: true,
+        }),
       );
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
@@ -313,9 +306,10 @@ describe('AnimeStatsService', () => {
     test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'animestats',
-        editReply: jest.fn()
+        editReply: jest
+          .fn()
           .mockRejectedValueOnce(new Error('cannot edit'))
-          .mockResolvedValueOnce(undefined)
+          .mockResolvedValueOnce(undefined),
       });
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
@@ -324,7 +318,7 @@ describe('AnimeStatsService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true
+        ephemeral: true,
       });
     });
 
@@ -334,7 +328,7 @@ describe('AnimeStatsService', () => {
       const interaction = createMockInteraction({
         commandName: 'animestats',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
-        reply: jest.fn().mockRejectedValue(new Error('cannot reply'))
+        reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
       await expect(service.handleAnimeStatsCommand(interaction)).resolves.toBeUndefined();
@@ -343,7 +337,7 @@ describe('AnimeStatsService', () => {
       expect(metrics.trackApiRequest).not.toHaveBeenCalled();
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to send final error message',
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -358,7 +352,7 @@ describe('AnimeStatsService', () => {
         pausedAnime: 1,
         droppedAnime: 1,
         planningAnime: 0,
-        averageScore: '82.50'
+        averageScore: '82.50',
       };
 
       const embed = service.createAnimeStatsEmbed(username, stats);
@@ -378,11 +372,11 @@ describe('AnimeStatsService', () => {
         pausedAnime: 1,
         droppedAnime: 1,
         planningAnime: 0,
-        averageScore: '82.50'
+        averageScore: '82.50',
       };
 
       const embed = service.createAnimeStatsEmbed(username, stats);
-      const fieldNames = embed.data.fields.map(f => f.name);
+      const fieldNames = embed.data.fields.map((f) => f.name);
 
       expect(fieldNames).toContainEqual(expect.stringMatching(/Total Anime/i));
       expect(fieldNames).toContainEqual(expect.stringMatching(/Completed/i));
@@ -405,7 +399,7 @@ describe('AnimeStatsService', () => {
       const metrics = require('../../metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: [{ message: 'Server error' }]
+        errors: [{ message: 'Server error' }],
       });
 
       try {

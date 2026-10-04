@@ -2,7 +2,7 @@ name: Deploy Discord Bot
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -11,7 +11,7 @@ env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ github.repository }}    
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # Gate deploys on the Jest suite — mirrors the `test` job in test.yml, keep the two in sync.
@@ -27,7 +27,7 @@ jobs:
 
       - name: Install bun ${{ matrix.bun-version }}
         uses: oven-sh/setup-bun@v2
-        with: 
+        with:
           bun-version: ${{ matrix.bun-version }}
 
       - name: Setup bun cache
@@ -130,46 +130,45 @@ jobs:
         # against the sigstore community Fulcio instance.
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
-  
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-    - name: Notify Discord - Start
-      uses: sarisia/actions-status-discord@v1
-      with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        title: "🚀 Deployment Started"
-        description: "Starting deployment of new changes..."
-        color: 0x03fc90
-        
-    - name: Deploy using SSH
-      id: deploy
-      uses: appleboy/ssh-action@v1.2.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /opt/anilist-discord
-          sudo docker compose --project-directory /opt/anilist-discord down
-          git pull
-          sudo docker compose --project-directory /opt/anilist-discord pull
-          sudo docker compose --project-directory /opt/anilist-discord up -d
-    - name: Notify Discord - Success
-      if: success()
-      uses: sarisia/actions-status-discord@v1
-      with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        title: "✅ Deployment Successful"
-        description: "Bot has been updated and restarted successfully!"
-        color: 0x00ff00
-        
-    - name: Notify Discord - Failure
-      if: failure()
-      uses: sarisia/actions-status-discord@v1
-      with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        title: "❌ Deployment Failed"
-        description: "There was an error during deployment. Please check the GitHub Actions logs."
-        color: 0xff0000
+      - name: Notify Discord - Start
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: '🚀 Deployment Started'
+          description: 'Starting deployment of new changes...'
+          color: 0x03fc90
+
+      - name: Deploy using SSH
+        id: deploy
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/anilist-discord
+            sudo docker compose --project-directory /opt/anilist-discord down
+            git pull
+            sudo docker compose --project-directory /opt/anilist-discord pull
+            sudo docker compose --project-directory /opt/anilist-discord up -d
+      - name: Notify Discord - Success
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: '✅ Deployment Successful'
+          description: 'Bot has been updated and restarted successfully!'
+          color: 0x00ff00
+
+      - name: Notify Discord - Failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: '❌ Deployment Failed'
+          description: 'There was an error during deployment. Please check the GitHub Actions logs.'
+          color: 0xff0000

@@ -10,14 +10,14 @@ jest.mock('../../logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
 jest.mock('../../metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
-  trackCommand: jest.fn(() => jest.fn())
+  trackCommand: jest.fn(() => jest.fn()),
 }));
 
 describe('E2E Tests - Command Interactions', () => {
@@ -44,15 +44,11 @@ describe('E2E Tests - Command Interactions', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: [
-                  { media: { id: 1 } },
-                  { media: { id: 5 } },
-                  { media: { id: 10 } }
-                ]
-              }
-            ]
-          }
-        }
+                entries: [{ media: { id: 1 } }, { media: { id: 5 } }, { media: { id: 10 } }],
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -62,7 +58,7 @@ describe('E2E Tests - Command Interactions', () => {
               id: 5,
               title: {
                 english: 'Fullmetal Alchemist',
-                romaji: 'フルメタルアルケミスト'
+                romaji: 'フルメタルアルケミスト',
               },
               episodes: 51,
               format: 'TV',
@@ -73,13 +69,13 @@ describe('E2E Tests - Command Interactions', () => {
               seasonYear: 2005,
               coverImage: {
                 large: 'https://example.com/cover.jpg',
-                extraLarge: 'https://example.com/cover_large.jpg'
-              }
+                extraLarge: 'https://example.com/cover_large.jpg',
+              },
             },
             status: 'COMPLETED',
-            score: 10
-          }
-        }
+            score: 10,
+          },
+        },
       });
 
       const result = await service.fetchRandomAnime(username);
@@ -103,8 +99,8 @@ describe('E2E Tests - Command Interactions', () => {
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           User: null,
-          MediaListCollection: { lists: [] }
-        }
+          MediaListCollection: { lists: [] },
+        },
       });
 
       let errorCaught = false;
@@ -131,15 +127,11 @@ describe('E2E Tests - Command Interactions', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: [
-                  { media: { id: 1 } },
-                  { media: { id: 5 } },
-                  { media: { id: 10 } }
-                ]
-              }
-            ]
-          }
-        }
+                entries: [{ media: { id: 1 } }, { media: { id: 5 } }, { media: { id: 10 } }],
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -149,7 +141,7 @@ describe('E2E Tests - Command Interactions', () => {
               id: 5,
               title: {
                 english: 'Berserk',
-                romaji: 'ベルセルク'
+                romaji: 'ベルセルク',
               },
               chapters: 364,
               volumes: 41,
@@ -161,13 +153,13 @@ describe('E2E Tests - Command Interactions', () => {
               startDate: { year: 1990 },
               coverImage: {
                 large: 'https://example.com/cover.jpg',
-                extraLarge: 'https://example.com/cover_large.jpg'
-              }
+                extraLarge: 'https://example.com/cover_large.jpg',
+              },
             },
             status: 'COMPLETED',
-            score: 10
-          }
-        }
+            score: 10,
+          },
+        },
       });
 
       const result = await service.fetchRandomManga(username);
@@ -192,8 +184,8 @@ describe('E2E Tests - Command Interactions', () => {
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           User: null,
-          MediaListCollection: { lists: [] }
-        }
+          MediaListCollection: { lists: [] },
+        },
       });
 
       let errorCaught = false;
@@ -232,9 +224,9 @@ describe('E2E Tests - Command Interactions', () => {
         data: {
           User: { id: 1 },
           MediaListCollection: {
-            lists: [{ entries: [{ media: { id: 1 } }] }]
-          }
-        }
+            lists: [{ entries: [{ media: { id: 1 } }] }],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
@@ -251,12 +243,12 @@ describe('E2E Tests - Command Interactions', () => {
               description: '',
               averageScore: 80,
               seasonYear: 2024,
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       try {
@@ -266,11 +258,7 @@ describe('E2E Tests - Command Interactions', () => {
       }
 
       // Verify tracking
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'manga_random',
-        'started',
-        username
-      );
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('manga_random', 'started', username);
     });
   });
 
@@ -289,32 +277,28 @@ describe('E2E Tests - Command Interactions', () => {
                 entries: [
                   { status: 'COMPLETED', media: { averageScore: 85 } },
                   { status: 'COMPLETED', media: { averageScore: 92 } },
-                  { status: 'COMPLETED', media: { averageScore: 88 } }
-                ]
+                  { status: 'COMPLETED', media: { averageScore: 88 } },
+                ],
               },
               {
                 name: 'Watching',
-                entries: [
-                  { status: 'CURRENT', media: { averageScore: 80 } }
-                ]
+                entries: [{ status: 'CURRENT', media: { averageScore: 80 } }],
               },
               {
                 name: 'Paused',
-                entries: []
+                entries: [],
               },
               {
                 name: 'Dropped',
-                entries: []
+                entries: [],
               },
               {
                 name: 'Planning',
-                entries: [
-                  { status: 'PLANNING', media: { averageScore: 75 } }
-                ]
-              }
-            ]
-          }
-        }
+                entries: [{ status: 'PLANNING', media: { averageScore: 75 } }],
+              },
+            ],
+          },
+        },
       });
 
       const stats = await service.fetchUserAnimeStats(username);
@@ -333,11 +317,7 @@ describe('E2E Tests - Command Interactions', () => {
 
       // Verify metrics tracking
       const metrics = require('../../metrics');
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'anime_stats',
-        'started',
-        username
-      );
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_stats', 'started', username);
     });
 
     test('should display stats embed with all fields', async () => {
@@ -349,15 +329,15 @@ describe('E2E Tests - Command Interactions', () => {
         pausedAnime: 2,
         droppedAnime: 3,
         planningAnime: 10,
-        averageScore: '85.50'
+        averageScore: '85.50',
       };
 
       const embed = service.createAnimeStatsEmbed('testuser', stats);
 
       expect(embed.data.title).toContain('📊');
       expect(embed.data.title).toContain('testuser');
-      expect(embed.data.fields.map(f => f.name)).toContainEqual(
-        expect.stringMatching(/Total Anime/i)
+      expect(embed.data.fields.map((f) => f.name)).toContainEqual(
+        expect.stringMatching(/Total Anime/i),
       );
     });
   });
@@ -382,16 +362,16 @@ describe('E2E Tests - Command Interactions', () => {
                       id: 1,
                       title: {
                         english: 'Cowboy Bebop',
-                        romaji: 'カウボーイビバップ'
+                        romaji: 'カウボーイビバップ',
                       },
-                      genres: ['Action', 'Sci-Fi']
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
+                      genres: ['Action', 'Sci-Fi'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       // Second call for recommendations
@@ -403,7 +383,7 @@ describe('E2E Tests - Command Interactions', () => {
                 id: 100,
                 title: {
                   english: 'Ghost in the Shell',
-                  romaji: '攻殻機動隊'
+                  romaji: '攻殻機動隊',
                 },
                 description: 'A cyberpunk masterpiece',
                 episodes: 26,
@@ -414,12 +394,12 @@ describe('E2E Tests - Command Interactions', () => {
                 averageScore: 85,
                 coverImage: {
                   large: 'https://example.com/large.jpg',
-                  extraLarge: 'https://example.com/extra.jpg'
-                }
-              }
-            ]
-          }
-        }
+                  extraLarge: 'https://example.com/extra.jpg',
+                },
+              },
+            ],
+          },
+        },
       });
 
       const result = await service.fetchAnimeRecommendation(username);
@@ -444,7 +424,7 @@ describe('E2E Tests - Command Interactions', () => {
         year: 2023,
         averageScore: 88,
         coverImage: 'https://example.com/cover.jpg',
-        matchedGenres: ['Action']
+        matchedGenres: ['Action'],
       };
 
       const embed = service.createAnimeRecommendationEmbed('testuser', recommendation);
@@ -465,10 +445,10 @@ describe('E2E Tests - Command Interactions', () => {
         data: {
           Media: {
             coverImage: {
-              extraLarge: 'https://example.com/cowboy_bebop_cover.jpg'
-            }
-          }
-        }
+              extraLarge: 'https://example.com/cowboy_bebop_cover.jpg',
+            },
+          },
+        },
       });
 
       const coverUrl = await service.fetchAnimeCoverById(animeId, username);
@@ -485,10 +465,10 @@ describe('E2E Tests - Command Interactions', () => {
         data: {
           Media: {
             coverImage: {
-              extraLarge: null
-            }
-          }
-        }
+              extraLarge: null,
+            },
+          },
+        },
       });
 
       const coverUrl = await service.fetchAnimeCoverById(animeId, username);
@@ -501,28 +481,28 @@ describe('E2E Tests - Command Interactions', () => {
       const mockInteraction = {
         user: { username: 'testuser' },
         options: {
-          getString: jest.fn().mockReturnValue('1')
+          getString: jest.fn().mockReturnValue('1'),
         },
         deferReply: jest.fn().mockResolvedValue(undefined),
-        editReply: jest.fn().mockResolvedValue(undefined)
+        editReply: jest.fn().mockResolvedValue(undefined),
       };
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           Media: {
             coverImage: {
-              extraLarge: 'https://example.com/cover.jpg'
-            }
-          }
-        }
+              extraLarge: 'https://example.com/cover.jpg',
+            },
+          },
+        },
       });
 
       await service.handleAnimeCoverCommand(mockInteraction);
 
       expect(mockInteraction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({
-          embeds: expect.any(Array)
-        })
+          embeds: expect.any(Array),
+        }),
       );
     });
   });
@@ -565,7 +545,7 @@ describe('E2E Tests - Command Interactions', () => {
       const username = 'testuser';
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
-        data: null
+        data: null,
       });
 
       let errorCaught = false;
@@ -589,9 +569,9 @@ describe('E2E Tests - Command Interactions', () => {
         data: {
           User: { id: 1 },
           MediaListCollection: {
-            lists: [{ entries: [{ media: { id: 1 } }] }]
-          }
-        }
+            lists: [{ entries: [{ media: { id: 1 } }] }],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
@@ -607,12 +587,12 @@ describe('E2E Tests - Command Interactions', () => {
               description: '',
               averageScore: 80,
               seasonYear: 2024,
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       try {
@@ -622,11 +602,7 @@ describe('E2E Tests - Command Interactions', () => {
       }
 
       // Verify tracking
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'anime_random',
-        'started',
-        username
-      );
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_random', 'started', username);
     });
   });
 });

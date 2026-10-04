@@ -1,10 +1,10 @@
-import js from "@eslint/js";
-import eslintConfigPrettier from "eslint-config-prettier";
-import globals from "globals";
+import js from '@eslint/js';
+import eslintConfigPrettier from 'eslint-config-prettier';
+import globals from 'globals';
 
 export default [
   {
-    ignores: ["coverage/", "logs/"],
+    ignores: ['coverage/', 'logs/'],
   },
   js.configs.recommended,
   {
@@ -12,12 +12,12 @@ export default [
       // Catch params are routinely ignored on purpose in this codebase
       // (e.g. `catch (_)` around URL parsing); don't flag them.
       // Underscore-prefixed args mark deliberate non-use.
-      "no-unused-vars": [
-        "error",
+      'no-unused-vars': [
+        'error',
         {
-          caughtErrors: "none",
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
+          caughtErrors: 'none',
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
         },
       ],
     },
@@ -25,7 +25,7 @@ export default [
   {
     languageOptions: {
       ecmaVersion: 2024,
-      sourceType: "commonjs",
+      sourceType: 'commonjs',
       globals: {
         ...globals.node,
       },
@@ -33,13 +33,13 @@ export default [
   },
   {
     // The config itself and any .mjs tooling files are ESM, not CommonJS.
-    files: ["**/*.mjs"],
+    files: ['**/*.mjs'],
     languageOptions: {
-      sourceType: "module",
+      sourceType: 'module',
     },
   },
   {
-    files: ["__tests__/**/*.js"],
+    files: ['__tests__/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,

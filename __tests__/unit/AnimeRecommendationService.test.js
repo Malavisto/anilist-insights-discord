@@ -7,14 +7,14 @@ jest.mock('../../logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
 jest.mock('../../metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
-  trackCommand: jest.fn(() => jest.fn())
+  trackCommand: jest.fn(() => jest.fn()),
 }));
 
 describe('AnimeRecommendationService', () => {
@@ -49,8 +49,8 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 1,
                       title: { english: 'Cowboy Bebop', romaji: 'カウボーイビバップ' },
-                      genres: ['Action', 'Adventure']
-                    }
+                      genres: ['Action', 'Adventure'],
+                    },
                   },
                   {
                     mediaId: 5,
@@ -59,14 +59,14 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 5,
                       title: { english: 'Fullmetal Alchemist', romaji: 'パンチ' },
-                      genres: ['Action', 'Adventure', 'Fantasy']
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
+                      genres: ['Action', 'Adventure', 'Fantasy'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       // Second API call - get recommendations
@@ -86,8 +86,8 @@ describe('AnimeRecommendationService', () => {
                 averageScore: 85,
                 coverImage: {
                   large: 'https://example.com/large.jpg',
-                  extraLarge: 'https://example.com/extra.jpg'
-                }
+                  extraLarge: 'https://example.com/extra.jpg',
+                },
               },
               {
                 id: 101,
@@ -101,12 +101,12 @@ describe('AnimeRecommendationService', () => {
                 averageScore: 80,
                 coverImage: {
                   large: 'https://example.com/large2.jpg',
-                  extraLarge: 'https://example.com/extra2.jpg'
-                }
-              }
-            ]
-          }
-        }
+                  extraLarge: 'https://example.com/extra2.jpg',
+                },
+              },
+            ],
+          },
+        },
       });
 
       const result = await service.fetchAnimeRecommendation(username);
@@ -135,14 +135,14 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 1,
                       title: { english: 'Test Anime', romaji: 'テスト' },
-                      genres: ['Action']
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
+                      genres: ['Action'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -161,12 +161,12 @@ describe('AnimeRecommendationService', () => {
                 averageScore: 82,
                 coverImage: {
                   large: 'https://example.com/cover.jpg',
-                  extraLarge: 'https://example.com/cover_extra.jpg'
-                }
-              }
-            ]
-          }
-        }
+                  extraLarge: 'https://example.com/cover_extra.jpg',
+                },
+              },
+            ],
+          },
+        },
       });
 
       const firstResult = await service.fetchAnimeRecommendation(username);
@@ -195,18 +195,18 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 1,
                       title: { english: 'Test Anime', romaji: 'テスト' },
-                      genres: ['Action']
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
+                      genres: ['Action'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       await expect(service.fetchAnimeRecommendation(username)).rejects.toThrow(
-        'No rated anime found'
+        'No rated anime found',
       );
     });
 
@@ -226,8 +226,8 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 1,
                       title: { english: 'Unrated Anime', romaji: '未評価' },
-                      genres: ['Action']
-                    }
+                      genres: ['Action'],
+                    },
                   },
                   {
                     mediaId: 2,
@@ -236,14 +236,14 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 2,
                       title: { english: 'Rated Anime', romaji: '評価済み' },
-                      genres: ['Action', 'Adventure']
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
+                      genres: ['Action', 'Adventure'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -262,12 +262,12 @@ describe('AnimeRecommendationService', () => {
                 averageScore: 80,
                 coverImage: {
                   large: 'https://example.com/large.jpg',
-                  extraLarge: 'https://example.com/extra.jpg'
-                }
-              }
-            ]
-          }
-        }
+                  extraLarge: 'https://example.com/extra.jpg',
+                },
+              },
+            ],
+          },
+        },
       });
 
       const result = await service.fetchAnimeRecommendation(username);
@@ -292,14 +292,14 @@ describe('AnimeRecommendationService', () => {
                     media: {
                       id: 1,
                       title: { english: 'Test', romaji: 'テスト' },
-                      genres: ['Action']
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        }
+                      genres: ['Action'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
@@ -318,12 +318,12 @@ describe('AnimeRecommendationService', () => {
                 averageScore: 80,
                 coverImage: {
                   large: 'https://example.com/large.jpg',
-                  extraLarge: 'https://example.com/extra.jpg'
-                }
-              }
-            ]
-          }
-        }
+                  extraLarge: 'https://example.com/extra.jpg',
+                },
+              },
+            ],
+          },
+        },
       });
 
       try {
@@ -332,11 +332,7 @@ describe('AnimeRecommendationService', () => {
         // Ignore
       }
 
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'recommendation',
-        'started',
-        username
-      );
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('recommendation', 'started', username);
     });
   });
 
@@ -353,7 +349,7 @@ describe('AnimeRecommendationService', () => {
       const username = 'testuser';
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: [{ message: 'Server error' }]
+        errors: [{ message: 'Server error' }],
       });
 
       await expect(service.fetchAnimeRecommendation(username)).rejects.toThrow();
@@ -374,14 +370,14 @@ describe('AnimeRecommendationService', () => {
                   media: {
                     id: 1,
                     title: { english: 'Cowboy Bebop', romaji: 'カウボーイビバップ' },
-                    genres: ['Action', 'Adventure']
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      }
+                    genres: ['Action', 'Adventure'],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
     };
 
     const mockRecommendationResponse = {
@@ -400,12 +396,12 @@ describe('AnimeRecommendationService', () => {
               averageScore: 85,
               coverImage: {
                 large: 'https://example.com/large.jpg',
-                extraLarge: 'https://example.com/extra.jpg'
-              }
-            }
-          ]
-        }
-      }
+                extraLarge: 'https://example.com/extra.jpg',
+              },
+            },
+          ],
+        },
+      },
     };
 
     test('should defer then edit the reply with the recommendation embed on success', async () => {
@@ -425,13 +421,13 @@ describe('AnimeRecommendationService', () => {
     test('should ask for a username when the option is missing', async () => {
       const interaction = createMockInteraction({
         commandName: 'animerecommend',
-        options: { getString: jest.fn().mockReturnValue(undefined) }
+        options: { getString: jest.fn().mockReturnValue(undefined) },
       });
 
       await service.handleAnimeRecommendCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: '❌ Please provide a valid AniList username.'
+        content: '❌ Please provide a valid AniList username.',
       });
       expect(mockAdapter.history.post.length).toBe(0);
     });
@@ -443,14 +439,14 @@ describe('AnimeRecommendationService', () => {
       await service.handleAnimeRecommendCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: expect.stringContaining('❌ Error fetching anime recommendation for testuser')
+        content: expect.stringContaining('❌ Error fetching anime recommendation for testuser'),
       });
     });
 
     test('should fall back to reply() when deferReply itself fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'animerecommend',
-        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction'))
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
       });
 
       await service.handleAnimeRecommendCommand(interaction);
@@ -458,8 +454,8 @@ describe('AnimeRecommendationService', () => {
       expect(interaction.reply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining('An unexpected error occurred'),
-          ephemeral: true
-        })
+          ephemeral: true,
+        }),
       );
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
@@ -467,9 +463,10 @@ describe('AnimeRecommendationService', () => {
     test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'animerecommend',
-        editReply: jest.fn()
+        editReply: jest
+          .fn()
           .mockRejectedValueOnce(new Error('cannot edit'))
-          .mockResolvedValueOnce(undefined)
+          .mockResolvedValueOnce(undefined),
       });
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
@@ -478,7 +475,7 @@ describe('AnimeRecommendationService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true
+        ephemeral: true,
       });
     });
 
@@ -487,14 +484,14 @@ describe('AnimeRecommendationService', () => {
       const interaction = createMockInteraction({
         commandName: 'animerecommend',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
-        reply: jest.fn().mockRejectedValue(new Error('cannot reply'))
+        reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
       await expect(service.handleAnimeRecommendCommand(interaction)).resolves.toBeUndefined();
 
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to send final error message',
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -511,25 +508,28 @@ describe('AnimeRecommendationService', () => {
       description: 'A great anime',
       averageScore: 88,
       coverImage: 'https://example.com/rec.jpg',
-      matchedGenres: ['Action']
+      matchedGenres: ['Action'],
     };
 
     test('should strip HTML and truncate long descriptions', () => {
       const clean = service.createAnimeRecommendationEmbed('testuser', {
         ...baseAnime,
-        description: '<i>Great</i> anime\n really'
+        description: '<i>Great</i> anime\n really',
       });
       expect(clean.data.description).toBe('📝 Great anime really');
 
       const long = service.createAnimeRecommendationEmbed('testuser', {
         ...baseAnime,
-        description: 'b'.repeat(250)
+        description: 'b'.repeat(250),
       });
       expect(long.data.description).toBe(`📝 ${'b'.repeat(200)}...`);
     });
 
     test('should use the default description when none is provided', () => {
-      const embed = service.createAnimeRecommendationEmbed('testuser', { ...baseAnime, description: null });
+      const embed = service.createAnimeRecommendationEmbed('testuser', {
+        ...baseAnime,
+        description: null,
+      });
 
       expect(embed.data.description).toBe('📝 No description available');
     });
@@ -540,15 +540,20 @@ describe('AnimeRecommendationService', () => {
       expect(embed.data.title).toBe('🌟 Recommended Anime for testuser');
       expect(embed.data.url).toBe('https://anilist.co/anime/7');
       expect(embed.data.color).toBe(0x00ff00);
-      expect(embed.data.fields.find(f => f.name === '🎬 Title').value).toBe('Recommended Anime');
+      expect(embed.data.fields.find((f) => f.name === '🎬 Title').value).toBe('Recommended Anime');
     });
 
     test('should list matched genres or the no-match fallback', () => {
       const matched = service.createAnimeRecommendationEmbed('testuser', baseAnime);
-      expect(matched.data.fields.find(f => f.name === '🏷️ Matched Genres').value).toBe('#Action');
+      expect(matched.data.fields.find((f) => f.name === '🏷️ Matched Genres').value).toBe('#Action');
 
-      const none = service.createAnimeRecommendationEmbed('testuser', { ...baseAnime, matchedGenres: [] });
-      expect(none.data.fields.find(f => f.name === '🏷️ Matched Genres').value).toBe('No genre matches');
+      const none = service.createAnimeRecommendationEmbed('testuser', {
+        ...baseAnime,
+        matchedGenres: [],
+      });
+      expect(none.data.fields.find((f) => f.name === '🏷️ Matched Genres').value).toBe(
+        'No genre matches',
+      );
     });
 
     test('should set the image only for valid http(s) URLs', () => {
@@ -557,15 +562,18 @@ describe('AnimeRecommendationService', () => {
 
       const invalid = service.createAnimeRecommendationEmbed('testuser', {
         ...baseAnime,
-        coverImage: 'javascript:alert(1)'
+        coverImage: 'javascript:alert(1)',
       });
       expect(invalid.data.image).toBeUndefined();
     });
 
     test('should fall back to Unknown for a missing year', () => {
-      const embed = service.createAnimeRecommendationEmbed('testuser', { ...baseAnime, year: null });
+      const embed = service.createAnimeRecommendationEmbed('testuser', {
+        ...baseAnime,
+        year: null,
+      });
 
-      expect(embed.data.fields.find(f => f.name === '📅 Year').value).toBe('Unknown');
+      expect(embed.data.fields.find((f) => f.name === '📅 Year').value).toBe('Unknown');
     });
   });
 });
