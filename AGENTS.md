@@ -66,3 +66,4 @@ Three tiers under `__tests__/`: `unit/` (one file per service), `integration/` (
 
 - Conventional commits (`fix:`, `feat:`, `ci:`, `docs:`, `chore:`, `chore(deps):`, `ops:`).
 - Agent-authored commits must include a `Co-authored-by` trailer identifying the agent.
+- Always check and fix formating with prettier after writing and before commits
