@@ -79,7 +79,7 @@ class AnimeCoverService {
      */
     async handleAnimeCoverCommand(interaction) {
         const username = interaction.user.username;
-        let coverImage = null;
+        let coverImage;
 
         try {
             // Defer in case the external API call takes some time

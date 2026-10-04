@@ -109,8 +109,6 @@ describe('Integration Tests - Service Interactions', () => {
       const service = new RandomAnimeService();
       service.cache = new CacheService(ttl, 'TestCache');
 
-      const username = 'testuser';
-
       // Set manual cache entry
       service.cache.set('anime_ids_testuser', [1, 2, 3]);
 
@@ -210,8 +208,6 @@ describe('Integration Tests - Service Interactions', () => {
       const ttl = 500; // Short TTL for testing
       const service = new RandomMangaService();
       service.cache = new CacheService(ttl, 'TestCache');
-
-      const username = 'testuser';
 
       // Set manual cache entry
       service.cache.set('manga_ids_testuser', [1, 2, 3]);
@@ -487,7 +483,6 @@ describe('Integration Tests - Service Interactions', () => {
   describe('Concurrent service calls', () => {
     test('should handle multiple concurrent requests', async () => {
       const statsService = new AnimeStatsService();
-      const randomService = new RandomAnimeService();
 
       const users = ['user1', 'user2', 'user3'];
 

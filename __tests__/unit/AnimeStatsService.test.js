@@ -141,15 +141,6 @@ describe('AnimeStatsService', () => {
 
     test('should use cached stats on second call', async () => {
       const username = 'testuser';
-      const mockStats = {
-        totalAnime: 10,
-        completedAnime: 5,
-        watchingAnime: 3,
-        pausedAnime: 1,
-        droppedAnime: 1,
-        planningAnime: 0,
-        averageScore: '82.50'
-      };
 
       // First call
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {

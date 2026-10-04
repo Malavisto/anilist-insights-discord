@@ -27,7 +27,7 @@ class AniListDiscordBot {
         logger.info('AniListDiscordBot initialized');
 
         // Discord bot token
-        this.TOKEN = dis_token;
+        this.TOKEN = token;
         this.httpServer = null;
         this.isShuttingDown = false;
 
