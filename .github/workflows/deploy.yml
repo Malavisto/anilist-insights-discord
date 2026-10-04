@@ -75,7 +75,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: "v3.1.3"
+          cosign-release: 'v3.1.3'
 
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
@@ -138,8 +138,8 @@ jobs:
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "🚀 Deployment Started"
-          description: "Starting deployment of new changes..."
+          title: '🚀 Deployment Started'
+          description: 'Starting deployment of new changes...'
           color: 0x03fc90
 
       - name: Deploy using SSH
@@ -160,8 +160,8 @@ jobs:
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "✅ Deployment Successful"
-          description: "Bot has been updated and restarted successfully!"
+          title: '✅ Deployment Successful'
+          description: 'Bot has been updated and restarted successfully!'
           color: 0x00ff00
 
       - name: Notify Discord - Failure
@@ -169,6 +169,6 @@ jobs:
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: "❌ Deployment Failed"
-          description: "There was an error during deployment. Please check the GitHub Actions logs."
+          title: '❌ Deployment Failed'
+          description: 'There was an error during deployment. Please check the GitHub Actions logs.'
           color: 0xff0000
