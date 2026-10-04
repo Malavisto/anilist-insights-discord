@@ -24,7 +24,7 @@ services:
 
 # Watchtower for auto updates
   watchtower:
-      image: containrrr/watchtower
+      image: nicholas-fedor/watchtower
       environment:
         - TZ=$TimeZone
         - WATCHTOWER_CLEANUP=true
