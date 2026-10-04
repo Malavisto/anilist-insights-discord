@@ -147,10 +147,10 @@ bun bot:attach
 
 ### Key Files
 
-- **modules/** Custom modules used by main app
+- **modules/commands/**: Slash command services.
+- **modules/shared/**: AniList requests, cache, embed, and reply helpers.
+- **modules/observability/**: Logger and Prometheus metrics singletons.
 - **app.js**: Main application logic.
-- **logger.js**: Logging module.
-- **metrics.js**: Prometheus metrics module.
 - **.env**: Stores sensitive configuration variables.
 
 ## Contributions

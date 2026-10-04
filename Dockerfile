@@ -1,4 +1,4 @@
-# Use an official Node runtime as the base image
+# Use an official Bun runtime as the base image
 FROM oven/bun:1.4-slim AS base
 WORKDIR /usr/src/app
 

@@ -94,10 +94,10 @@ bun run test:coverage
 
 Coverage reports are saved to `coverage/` directory. Thresholds:
 
-- Branches: 60%
-- Functions: 60%
-- Lines: 70%
-- Statements: 70%
+- Branches: 70%
+- Functions: 70%
+- Lines: 80%
+- Statements: 80%
 
 ## Test Environment Setup
 
@@ -203,10 +203,10 @@ __tests__/
 
 ```javascript
 // __tests__/unit/MyService.test.js
-const MyService = require('../../modules/MyService');
+const MyService = require('../../modules/commands/MyService');
 
-jest.mock('../../logger');
-jest.mock('../../metrics');
+jest.mock('../../modules/observability/logger');
+jest.mock('../../modules/observability/metrics');
 
 describe('MyService', () => {
   let service;
