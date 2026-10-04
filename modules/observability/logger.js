@@ -2,7 +2,7 @@ const winston = require('winston');
 const path = require('path');
 
 // Create logs directory if it doesn't exist
-const LOG_DIR = path.join(__dirname, 'logs');
+const LOG_DIR = path.join(__dirname, '..', '..', 'logs');
 
 // Ensure the logs directory exists
 const fs = require('fs');

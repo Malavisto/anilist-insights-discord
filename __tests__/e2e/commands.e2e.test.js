@@ -1,19 +1,19 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const RandomAnimeService = require('../../modules/RandomAnimeService');
-const RandomMangaService = require('../../modules/RandomMangaService');
-const AnimeRecommendationService = require('../../modules/animeRecommendation');
-const AnimeStatsService = require('../../modules/AnimeStatsService');
-const AnimeCoverService = require('../../modules/AnimeCoverService');
+const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
+const RandomMangaService = require('../../modules/commands/RandomMangaService');
+const AnimeRecommendationService = require('../../modules/commands/AnimeRecommendationService');
+const AnimeStatsService = require('../../modules/commands/AnimeStatsService');
+const AnimeCoverService = require('../../modules/commands/AnimeCoverService');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
@@ -88,7 +88,7 @@ describe('E2E Tests - Command Interactions', () => {
       expect(result.genres).toContain('Action');
 
       // Verify no errors
-      const logger = require('../../logger');
+      const logger = require('../../modules/observability/logger');
       expect(logger.error).not.toHaveBeenCalled();
     });
 
@@ -173,7 +173,7 @@ describe('E2E Tests - Command Interactions', () => {
       expect(result.genres).toContain('Action');
 
       // Verify no errors
-      const logger = require('../../logger');
+      const logger = require('../../modules/observability/logger');
       expect(logger.error).not.toHaveBeenCalled();
     });
 
@@ -218,7 +218,7 @@ describe('E2E Tests - Command Interactions', () => {
     test('should track metrics for successful command', async () => {
       const service = new RandomMangaService();
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {
@@ -316,7 +316,7 @@ describe('E2E Tests - Command Interactions', () => {
       expect(embed.data.fields.length).toBeGreaterThan(0);
 
       // Verify metrics tracking
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_stats', 'started', username);
     });
 
@@ -563,7 +563,7 @@ describe('E2E Tests - Command Interactions', () => {
     test('should track metrics for successful command', async () => {
       const service = new RandomAnimeService();
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {

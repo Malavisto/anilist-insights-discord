@@ -2,8 +2,8 @@ const axios = require('axios');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 // Use same logger and metricsService pattern as in other modules
-const logger = require('../logger');
-const metricsService = require('../metrics');
+const logger = require('../observability/logger');
+const metricsService = require('../observability/metrics');
 
 class AnimeCoverService {
   // /animecover slash-command

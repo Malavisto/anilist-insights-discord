@@ -2,14 +2,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/__tests__', '<rootDir>/modules'],
   testMatch: ['**/__tests__/**/*.test.js'],
-  collectCoverageFrom: [
-    'modules/**/*.js',
-    'app.js',
-    'metrics.js',
-    'logger.js',
-    '!node_modules/**',
-    '!__tests__/**',
-  ],
+  collectCoverageFrom: ['modules/**/*.js', 'app.js', '!node_modules/**', '!__tests__/**'],
   coverageThreshold: {
     global: {
       branches: 70,

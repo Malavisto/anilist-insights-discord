@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
@@ -8,7 +8,7 @@ jest.mock('../../logger', () => ({
 }));
 
 // @prometheus-io/client's global registry is per test file (jest isolates module
-// registries), so other files' jest.mock('../../metrics') are unaffected.
+// registries), so other files' jest.mock('../../modules/observability/metrics') are unaffected.
 const client = require('@prometheus-io/client');
 
 // Must run BEFORE requiring metrics.js: @prometheus-io/client 15's
@@ -16,7 +16,7 @@ const client = require('@prometheus-io/client');
 // cannot stop, which would leave the worker with open handles. No-op it.
 jest.spyOn(client, 'collectDefaultMetrics').mockImplementation(() => {});
 
-const metricsService = require('../../metrics');
+const metricsService = require('../../modules/observability/metrics');
 
 const sha256Prefix = (value) =>
   crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);

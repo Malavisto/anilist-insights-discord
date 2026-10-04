@@ -1,4 +1,4 @@
-const CacheService = require('../../modules/CacheService');
+const CacheService = require('../../modules/shared/CacheService');
 
 describe('CacheService', () => {
   let cache;

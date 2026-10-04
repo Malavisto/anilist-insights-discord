@@ -2,7 +2,7 @@
  * Generic caching service with TTL (time-to-live) support
  * Used across multiple modules for performance optimization
  */
-const logger = require('../logger');
+const logger = require('../observability/logger');
 
 class CacheService {
   constructor(ttl = 300000, name = 'Default', sweepInterval = 60000) {

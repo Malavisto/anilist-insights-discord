@@ -1,16 +1,16 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const RandomAnimeService = require('../../modules/RandomAnimeService');
+const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
 const { createMockInteraction } = require('../helpers/mockInteraction');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
@@ -152,7 +152,7 @@ describe('RandomAnimeService', () => {
       expect(result).toBeDefined();
 
       // Cache hit should be tracked
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -186,7 +186,7 @@ describe('RandomAnimeService', () => {
 
     test('should track API requests', async () => {
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {
@@ -252,7 +252,7 @@ describe('RandomAnimeService', () => {
     });
     test('does not track success when the API returns no MediaList', async () => {
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -382,8 +382,8 @@ describe('RandomAnimeService', () => {
     });
 
     test('logs and stays silent when every response path fails', async () => {
-      const metrics = require('../../metrics');
-      const logger = require('../../logger');
+      const metrics = require('../../modules/observability/metrics');
+      const logger = require('../../modules/observability/logger');
       const interaction = createMockInteraction({
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),

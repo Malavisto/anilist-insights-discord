@@ -1,18 +1,18 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const CacheService = require('../../modules/CacheService');
-const RandomAnimeService = require('../../modules/RandomAnimeService');
-const RandomMangaService = require('../../modules/RandomMangaService');
-const AnimeStatsService = require('../../modules/AnimeStatsService');
+const CacheService = require('../../modules/shared/CacheService');
+const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
+const RandomMangaService = require('../../modules/commands/RandomMangaService');
+const AnimeStatsService = require('../../modules/commands/AnimeStatsService');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
@@ -100,7 +100,7 @@ describe('Integration Tests - Service Interactions', () => {
       const result2 = await service.fetchRandomAnime(username);
       expect(result2).toBeDefined();
 
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -198,7 +198,7 @@ describe('Integration Tests - Service Interactions', () => {
       const result2 = await service.fetchRandomManga(username);
       expect(result2).toBeDefined();
 
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalledWith('manga_random');
       // Two fetches = one IDs request + two detail requests, thanks to the cache
       expect(mockAdapter.history.post.length).toBe(3);
@@ -253,7 +253,7 @@ describe('Integration Tests - Service Interactions', () => {
     });
 
     test('should maintain cache consistency during errors', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const service = new RandomMangaService();
       const username = 'testuser';
 
@@ -431,7 +431,7 @@ describe('Integration Tests - Service Interactions', () => {
     });
 
     test('should maintain cache consistency during errors', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const service = new RandomAnimeService();
       const username = 'testuser';
 

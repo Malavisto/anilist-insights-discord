@@ -3,14 +3,14 @@ const express = require('express');
 const client = require('@prometheus-io/client');
 
 // Import modular services
-const AnimeRecommendationService = require('./modules/animeRecommendation');
-const RandomAnimeService = require('./modules/RandomAnimeService');
-const AnimeStatsService = require('./modules/AnimeStatsService');
-const AnimeCoverService = require('./modules/AnimeCoverService');
-const RandomMangaService = require('./modules/RandomMangaService');
-const metricsService = require('./metrics');
+const AnimeRecommendationService = require('./modules/commands/AnimeRecommendationService');
+const RandomAnimeService = require('./modules/commands/RandomAnimeService');
+const AnimeStatsService = require('./modules/commands/AnimeStatsService');
+const AnimeCoverService = require('./modules/commands/AnimeCoverService');
+const RandomMangaService = require('./modules/commands/RandomMangaService');
+const metricsService = require('./modules/observability/metrics');
 
-const logger = require('./logger');
+const logger = require('./modules/observability/logger');
 
 const dis_token = process.env.DISCORD_TOKEN;
 

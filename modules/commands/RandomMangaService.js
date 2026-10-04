@@ -1,8 +1,8 @@
 const axios = require('axios');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
-const logger = require('../logger');
-const metricsService = require('../metrics');
-const CacheService = require('./CacheService');
+const logger = require('../observability/logger');
+const metricsService = require('../observability/metrics');
+const CacheService = require('../shared/CacheService');
 
 // Main Logic
 class RandomMangaService {

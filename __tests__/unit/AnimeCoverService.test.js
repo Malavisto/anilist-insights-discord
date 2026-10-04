@@ -1,16 +1,16 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const AnimeCoverService = require('../../modules/AnimeCoverService');
+const AnimeCoverService = require('../../modules/commands/AnimeCoverService');
 const { createMockInteraction } = require('../helpers/mockInteraction');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackError: jest.fn(),
   trackCommand: jest.fn(() => jest.fn()),
@@ -110,7 +110,7 @@ describe('AnimeCoverService', () => {
     test('should track errors on API failure', async () => {
       const animeId = 1;
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
@@ -209,7 +209,7 @@ describe('AnimeCoverService', () => {
         },
       });
 
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       await service.handleAnimeCoverCommand(mockInteraction);
 
@@ -237,7 +237,7 @@ describe('AnimeCoverService', () => {
         },
       });
 
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       await service.handleAnimeCoverCommand(mockInteraction);
 
@@ -267,7 +267,7 @@ describe('AnimeCoverService', () => {
     });
 
     test('should log when the fallback reply also fails', async () => {
-      const logger = require('../../logger');
+      const logger = require('../../modules/observability/logger');
       const mockInteraction = createMockInteraction({
         commandName: 'animecover',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),

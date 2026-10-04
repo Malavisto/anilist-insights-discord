@@ -4,17 +4,17 @@ process.env.METRICS_PORT = '9911';
 
 const { AniListDiscordBot } = require('../../app');
 const { Client, GatewayIntentBits } = require('discord.js');
-const logger = require('../../logger');
+const logger = require('../../modules/observability/logger');
 const { createMockInteraction } = require('../helpers/mockInteraction');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackCommand: jest.fn(() => jest.fn()),
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
@@ -31,41 +31,43 @@ const mockCover = { handleAnimeCoverCommand: jest.fn() };
 
 // Real command definitions (real SlashCommandBuilders) keep this test honest
 // about the register/dispatch sync invariant; only the constructor is faked.
-const mockRealRandom = jest.requireActual('../../modules/RandomAnimeService');
-const mockRealManga = jest.requireActual('../../modules/RandomMangaService');
-const mockRealStats = jest.requireActual('../../modules/AnimeStatsService');
-const mockRealRecommendation = jest.requireActual('../../modules/animeRecommendation');
-const mockRealCover = jest.requireActual('../../modules/AnimeCoverService');
+const mockRealRandom = jest.requireActual('../../modules/commands/RandomAnimeService');
+const mockRealManga = jest.requireActual('../../modules/commands/RandomMangaService');
+const mockRealStats = jest.requireActual('../../modules/commands/AnimeStatsService');
+const mockRealRecommendation = jest.requireActual(
+  '../../modules/commands/AnimeRecommendationService',
+);
+const mockRealCover = jest.requireActual('../../modules/commands/AnimeCoverService');
 
-jest.mock('../../modules/RandomAnimeService', () => {
+jest.mock('../../modules/commands/RandomAnimeService', () => {
   const MockRandomAnimeService = jest.fn(() => mockRandom);
   Object.defineProperty(MockRandomAnimeService, 'commandDefinition', {
     get: () => mockRealRandom.commandDefinition,
   });
   return MockRandomAnimeService;
 });
-jest.mock('../../modules/RandomMangaService', () => {
+jest.mock('../../modules/commands/RandomMangaService', () => {
   const MockRandomMangaService = jest.fn(() => mockManga);
   Object.defineProperty(MockRandomMangaService, 'commandDefinition', {
     get: () => mockRealManga.commandDefinition,
   });
   return MockRandomMangaService;
 });
-jest.mock('../../modules/AnimeStatsService', () => {
+jest.mock('../../modules/commands/AnimeStatsService', () => {
   const MockAnimeStatsService = jest.fn(() => mockStats);
   Object.defineProperty(MockAnimeStatsService, 'commandDefinition', {
     get: () => mockRealStats.commandDefinition,
   });
   return MockAnimeStatsService;
 });
-jest.mock('../../modules/animeRecommendation', () => {
+jest.mock('../../modules/commands/AnimeRecommendationService', () => {
   const MockAnimeRecommendationService = jest.fn(() => mockRecommendation);
   Object.defineProperty(MockAnimeRecommendationService, 'commandDefinition', {
     get: () => mockRealRecommendation.commandDefinition,
   });
   return MockAnimeRecommendationService;
 });
-jest.mock('../../modules/AnimeCoverService', () => {
+jest.mock('../../modules/commands/AnimeCoverService', () => {
   const MockAnimeCoverService = jest.fn(() => mockCover);
   Object.defineProperty(MockAnimeCoverService, 'commandDefinition', {
     get: () => mockRealCover.commandDefinition,
@@ -131,11 +133,11 @@ describe('AniListDiscordBot', () => {
     });
 
     test('instantiates the five services', () => {
-      const RandomAnimeService = require('../../modules/RandomAnimeService');
-      const RandomMangaService = require('../../modules/RandomMangaService');
-      const AnimeStatsService = require('../../modules/AnimeStatsService');
-      const AnimeRecommendationService = require('../../modules/animeRecommendation');
-      const AnimeCoverService = require('../../modules/AnimeCoverService');
+      const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
+      const RandomMangaService = require('../../modules/commands/RandomMangaService');
+      const AnimeStatsService = require('../../modules/commands/AnimeStatsService');
+      const AnimeRecommendationService = require('../../modules/commands/AnimeRecommendationService');
+      const AnimeCoverService = require('../../modules/commands/AnimeCoverService');
 
       expect(RandomAnimeService).toHaveBeenCalledTimes(1);
       expect(RandomMangaService).toHaveBeenCalledTimes(1);
@@ -230,7 +232,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('tracks the command with its metric name and guild id', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       const interaction = createMockInteraction({ commandName: 'mangarandom' });
 
@@ -240,7 +242,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ends the command timer with success when the handler resolves', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
 
       await handler(createMockInteraction());
@@ -250,7 +252,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ends the timer with failure and logs when the handler throws', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       mockRandom.handleRandomAnimeCommand.mockRejectedValueOnce(new Error('boom'));
 
@@ -265,7 +267,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('tolerates trackCommand returning undefined', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       metrics.trackCommand.mockReturnValueOnce(undefined);
 
@@ -274,7 +276,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ignores non-chat-input interactions', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       const interaction = createMockInteraction({ isChatInputCommand: jest.fn(() => false) });
 
@@ -285,7 +287,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ignores unknown command names', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       const interaction = createMockInteraction({ commandName: 'unknowncmd' });
 
@@ -337,7 +339,7 @@ describe('AniListDiscordBot', () => {
     };
 
     test('serves metrics with the prometheus content type', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       metrics.getMetrics.mockResolvedValue('# HELP anilist_bot_commands_total 2');
       const res = { set: jest.fn(), send: jest.fn(), status: jest.fn(() => res) };
 
@@ -351,7 +353,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('returns 500 when metric collection fails', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       metrics.getMetrics.mockRejectedValue(new Error('collect failed'));
       const res = { set: jest.fn(), send: jest.fn(), status: jest.fn(() => res) };
 
