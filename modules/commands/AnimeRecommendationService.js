@@ -1,4 +1,6 @@
-const axios = require('axios');
+const { cleanDescription: sanitizeDescription, isValidHttpUrl } = require('../shared/embedHelpers');
+const anilistRequest = require('../shared/anilistRequest');
+const replyError = require('../shared/replyError');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../observability/logger');
 const metricsService = require('../observability/metrics');
@@ -29,13 +31,11 @@ class AnimeRecommendationService {
 
   async fetchAnimeRecommendation(username) {
     try {
-      metricsService.trackApiRequest('recommendation', 'started', username);
-
       // Existing cache check
       const cachedRecommendation = this.cache.get(`recommendation_${username}`);
       if (cachedRecommendation) {
         metricsService.trackCacheHit('anime_recommendation');
-        metricsService.trackApiRequest('recommendation', 'cache_hit', username);
+
         return cachedRecommendation;
       }
 
@@ -62,20 +62,7 @@ class AnimeRecommendationService {
             `;
 
       // Fetch user's media list
-      const response = await axios.post(
-        'https://graphql.anilist.co',
-        {
-          query,
-          variables: { username },
-        },
-        {
-          signal: AbortSignal.timeout(10000),
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        },
-      );
+      const response = await anilistRequest(query, { username }, 'recommendation', username);
 
       // Get user's anime list and find highest-rated anime
       const lists = response.data.data.MediaListCollection.lists;
@@ -127,19 +114,11 @@ class AnimeRecommendationService {
             }
             `;
 
-      const recommendationResponse = await axios.post(
-        'https://graphql.anilist.co',
-        {
-          query: recommendationQuery,
-          variables: { genres: genresOfInterest },
-        },
-        {
-          signal: AbortSignal.timeout(10000),
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        },
+      const recommendationResponse = await anilistRequest(
+        recommendationQuery,
+        { genres: genresOfInterest },
+        'recommendation',
+        username,
       );
 
       const recommendedAnimes = recommendationResponse.data.data.Page.media;
@@ -154,7 +133,6 @@ class AnimeRecommendationService {
       }
 
       // Track successful API request after all validations complete
-      metricsService.trackApiRequest('recommendation', 'success', username);
 
       // Select a random recommendation from the available range
       const randomIndex = Math.floor(Math.random() * uniqueRecommendations.length);
@@ -180,7 +158,7 @@ class AnimeRecommendationService {
       return payload;
     } catch (error) {
       metricsService.trackError('recommendation_failure', 'anime_recommend');
-      metricsService.trackApiRequest('recommendation', 'failure', username);
+
       logger.error('Anime recommendation fetch failed', {
         username,
         errorMessage: error.message,
@@ -191,12 +169,7 @@ class AnimeRecommendationService {
   }
 
   createAnimeRecommendationEmbed(username, anime) {
-    const cleanDescription = anime.description
-      ? anime.description
-          .replace(/<\/?[^>]+(>|$)/g, '')
-          .replace(/\s+/g, ' ')
-          .trim()
-      : 'No description available';
+    const cleanDescription = sanitizeDescription(anime.description);
 
     const animeDirectLink = `https://anilist.co/anime/${anime.id}`;
 
@@ -256,14 +229,6 @@ class AnimeRecommendationService {
       });
 
     // Validate and set image if URL is valid
-    const isValidHttpUrl = (string) => {
-      try {
-        const url = new URL(string);
-        return url.protocol === 'http:' || url.protocol === 'https:';
-      } catch (_) {
-        return false;
-      }
-    };
 
     if (anime.coverImage && isValidHttpUrl(anime.coverImage)) {
       embed.setImage(anime.coverImage);
@@ -283,7 +248,7 @@ class AnimeRecommendationService {
         await interaction.editReply({
           content: '❌ Please provide a valid AniList username.',
         });
-        return;
+        return false;
       }
 
       try {
@@ -293,8 +258,8 @@ class AnimeRecommendationService {
 
         await interaction.editReply({
           embeds: [recommendationEmbed],
-          ephemeral: false,
         });
+        return true;
       } catch (fetchError) {
         logger.error('Anime recommendation command processing error', {
           username,
@@ -309,6 +274,7 @@ class AnimeRecommendationService {
         - Unable to generate recommendations
         - AniList API temporarily unavailable`,
         });
+        return false;
       }
     } catch (globalError) {
       logger.error('Critical error in anime recommendation command', {
@@ -316,24 +282,12 @@ class AnimeRecommendationService {
         errorStack: globalError.stack,
       });
 
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: '❌ An unexpected error occurred. Please try again later.',
-            ephemeral: true,
-          });
-        } else if (interaction.deferred) {
-          await interaction.editReply({
-            content: '❌ An unexpected error occurred. Please try again later.',
-            ephemeral: true,
-          });
-        }
-      } catch (replyError) {
-        logger.error('Failed to send final error message', {
-          originalError: globalError,
-          replyError,
-        });
-      }
+      await replyError(
+        interaction,
+        '❌ An unexpected error occurred. Please try again later.',
+        globalError,
+      );
+      return false;
     }
   }
 }

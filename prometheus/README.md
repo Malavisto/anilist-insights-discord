@@ -28,3 +28,7 @@ Grafana is used to visualize the metrics collected by Prometheus. Follow these s
 ## Conclusion
 
 By following the steps above, you can set up Prometheus to monitor your application and use Grafana to visualize the collected metrics. For more detailed configurations, refer to the official documentation of [Prometheus](https://prometheus.io/docs/introduction/overview/) and [Grafana](https://grafana.com/docs/grafana/latest/).
+
+## Metric semantics
+
+API request metrics count each HTTP request, including both queries for random selections and uncached recommendations. `started` counts attempts; `success` and `failure` record HTTP/GraphQL outcomes. Empty results can still be command failures after a successful request. Cache hits use `anilist_bot_cache_hits` separately. The dashboard cache ratio compares cache hits with executions of the four cache-enabled commands.

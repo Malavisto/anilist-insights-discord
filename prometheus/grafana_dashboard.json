@@ -137,7 +137,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Share of AniList API requests served from cache instead of hitting the API",
+      "description": "Share of cache-enabled command executions that used cached data; random commands still fetch media details.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -191,7 +191,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(anilist_api_requests_total{status=\"cache_hit\"}[$__rate_interval])) / sum(rate(anilist_api_requests_total{status=\"started\"}[$__rate_interval]))",
+          "expr": "sum(rate(anilist_bot_cache_hits[$__rate_interval])) / sum(rate(anilist_bot_commands_total{command_type=~\"anime_random|manga_random|anime_stats|anime_recommendation\"}[$__rate_interval]))",
           "refId": "A"
         }
       ],
@@ -440,7 +440,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "AniList API requests per interval by endpoint and status (started / cache_hit / success / failure), aggregated across users",
+      "description": "Actual AniList HTTP requests per interval by endpoint and status (started / success / failure), aggregated across users; cache hits are tracked separately.",
       "fieldConfig": {
         "defaults": {
           "color": {

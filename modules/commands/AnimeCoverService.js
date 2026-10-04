@@ -1,4 +1,5 @@
-const axios = require('axios');
+const anilistRequest = require('../shared/anilistRequest');
+const replyError = require('../shared/replyError');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 
 // Use same logger and metricsService pattern as in other modules
@@ -42,18 +43,11 @@ class AnimeCoverService {
         `;
 
     try {
-      const response = await axios.post(
-        'https://graphql.anilist.co',
-        {
-          query,
-          variables: { id: parseInt(animeId) },
-        },
-        {
-          signal: AbortSignal.timeout(10000),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
+      const response = await anilistRequest(
+        query,
+        { id: parseInt(animeId) },
+        'anime_cover',
+        username,
       );
 
       const result = response.data?.data?.Media?.coverImage?.extraLarge || null;
@@ -64,9 +58,8 @@ class AnimeCoverService {
         errorMessage: error.message,
         errorStack: error.stack,
       });
-      // Track an error event and API request status
+      // Track the fetch error separately from HTTP request metrics
       metricsService.trackError('cover_fetch_failure', 'anime_cover');
-      metricsService.trackApiRequest('anime_cover', 'failure', username);
 
       throw error; // Let the caller handle response
     }
@@ -91,7 +84,7 @@ class AnimeCoverService {
       // Validate that input contains only digits
       if (!animeIdStr || !/^\d+$/.test(animeIdStr)) {
         await interaction.editReply('Please provide a valid anime ID (numbers only).');
-        return;
+        return false;
       }
 
       const animeId = parseInt(animeIdStr);
@@ -99,16 +92,11 @@ class AnimeCoverService {
       // Attempt to fetch the cover
       coverImage = await this.fetchAnimeCoverById(animeId, username);
 
-      // If we have a cover, send success metrics, else fail gracefully
+      // An empty cover is a command failure even if the HTTP request succeeded.
       if (!coverImage) {
-        // Possibly track as a "failure" due to no cover
-        metricsService.trackApiRequest('anime_cover', 'failure', username);
         await interaction.editReply('No cover image found for that anime ID.');
-        return;
+        return false;
       }
-
-      // We have a successful response
-      metricsService.trackApiRequest('anime_cover', 'success', username);
 
       // Construct embed with the fetched cover image
       const embed = new EmbedBuilder()
@@ -116,6 +104,7 @@ class AnimeCoverService {
         .setImage(coverImage);
 
       await interaction.editReply({ embeds: [embed] });
+      return true;
     } catch (globalError) {
       logger.error('Critical error in anime cover command', {
         username,
@@ -123,26 +112,12 @@ class AnimeCoverService {
         errorStack: globalError.stack,
       });
 
-      try {
-        // Attempt to send an error message
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: '❌ An error occurred while fetching the anime cover.',
-            ephemeral: true,
-          });
-        } else if (interaction.deferred) {
-          await interaction.editReply({
-            content: '❌ An error occurred while fetching the anime cover.',
-            ephemeral: true,
-          });
-        }
-      } catch (replyError) {
-        logger.error('Failed to send final error message', {
-          username,
-          originalError: globalError,
-          replyError,
-        });
-      }
+      await replyError(
+        interaction,
+        '❌ An error occurred while fetching the anime cover.',
+        globalError,
+      );
+      return false;
     }
   }
 }

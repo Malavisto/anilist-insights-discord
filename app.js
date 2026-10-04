@@ -28,20 +28,24 @@ class AniListDiscordBot {
     this.httpServer = null;
     this.isShuttingDown = false;
 
-    // Initialize services
-    this.recommendationService = new AnimeRecommendationService();
-    this.randomAnimeService = new RandomAnimeService();
-    this.animeStatsService = new AnimeStatsService();
-    this.animeCoverService = new AnimeCoverService();
-    this.randomMangaService = new RandomMangaService();
+    const services = [
+      ['randomAnimeService', RandomAnimeService],
+      ['randomMangaService', RandomMangaService],
+      ['animeStatsService', AnimeStatsService],
+      ['recommendationService', AnimeRecommendationService],
+      ['animeCoverService', AnimeCoverService],
+    ];
+    this.commands = services.map(([property, Service]) => {
+      const service = new Service();
+      this[property] = service;
+      return { ...Service.commandDefinition, service };
+    });
+    this.commandHandlers = new Map(this.commands.map((command) => [command.builder.name, command]));
 
     this.setupMetricsServer();
 
     this.setupEventListeners();
     this.setupProcessHandlers();
-
-    this.accessToken = null;
-    this.tokenExpiresAt = 0;
   }
 
   setupMetricsServer() {
@@ -77,6 +81,10 @@ class AniListDiscordBot {
       try {
         if (this.client.isReady()) {
           this.client.destroy();
+        }
+
+        for (const { service } of this.commands) {
+          service.cache?.destroy();
         }
 
         if (this.httpServer) {
@@ -133,42 +141,15 @@ class AniListDiscordBot {
     this.client.on('interactionCreate', async (interaction) => {
       if (!interaction.isChatInputCommand()) return;
 
-      // Define services for command handling
-      const randomAnimeDef = RandomAnimeService.commandDefinition;
-      const statsDef = AnimeStatsService.commandDefinition;
-      const recommendationDef = AnimeRecommendationService.commandDefinition;
-      const coverDef = AnimeCoverService.commandDefinition;
-      const randomMangaDef = RandomMangaService.commandDefinition;
+      const handler = this.commandHandlers.get(interaction.commandName);
+      if (!handler) return;
 
-      const commandHandlers = {
-        [randomAnimeDef.builder.name]: [
-          this.randomAnimeService,
-          randomAnimeDef.methodName,
-          randomAnimeDef.metricName,
-        ],
-        [randomMangaDef.builder.name]: [
-          this.randomMangaService,
-          randomMangaDef.methodName,
-          randomMangaDef.metricName,
-        ],
-        [statsDef.builder.name]: [this.animeStatsService, statsDef.methodName, statsDef.metricName],
-        [recommendationDef.builder.name]: [
-          this.recommendationService,
-          recommendationDef.methodName,
-          recommendationDef.metricName,
-        ],
-        [coverDef.builder.name]: [this.animeCoverService, coverDef.methodName, coverDef.metricName],
-      };
-
-      const handler = commandHandlers[interaction.commandName];
-      if (!handler) return; // Unknown command - nothing to do
-
-      const [service, methodName, metricName] = handler;
+      const { service, methodName, metricName } = handler;
       let endTimer;
       let failed = false;
       try {
         endTimer = metricsService.trackCommand(metricName, interaction.guildId);
-        await service[methodName](interaction);
+        failed = (await service[methodName](interaction)) === false;
       } catch (error) {
         failed = true;
         // Errors are already logged and reported to the user by each service
@@ -187,22 +168,9 @@ class AniListDiscordBot {
   }
 
   async registerSlashCommands(guild) {
-    const commands = [
-      // Random anime command
-      RandomAnimeService.commandDefinition.builder,
-      // Manga random commanf
-      RandomMangaService.commandDefinition.builder,
-      // Anime stats command
-      AnimeStatsService.commandDefinition.builder,
-      // Anime recommendation command
-      AnimeRecommendationService.commandDefinition.builder,
-      // Anime cover command
-      AnimeCoverService.commandDefinition.builder,
-    ];
-
     // Bulk overwrite replaces existing commands instead of duplicating them
-    await guild.commands.set(commands.map((command) => command.toJSON()));
-    logger.info(`Registered ${commands.length} slash commands for guild ${guild.id}`);
+    await guild.commands.set(this.commands.map(({ builder }) => builder.toJSON()));
+    logger.info(`Registered ${this.commands.length} slash commands for guild ${guild.id}`);
   }
 }
 
@@ -211,7 +179,7 @@ function initializeBot() {
   return new AniListDiscordBot(dis_token);
 }
 
-// Only boot when run directly (node app.js / pnpm start); requiring the
+// Only boot when run directly (bun app.js / bun start); requiring the
 // module must not start the bot
 if (require.main === module) {
   initializeBot();

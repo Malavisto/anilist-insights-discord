@@ -1,3 +1,4 @@
+const { isValidHttpUrl } = require('../../modules/shared/embedHelpers');
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
@@ -250,7 +251,7 @@ describe('RandomAnimeService', () => {
 
       await expect(service.fetchRandomAnime(username)).rejects.toThrow();
     });
-    test('does not track success when the API returns no MediaList', async () => {
+    test('counts both HTTP responses even when no MediaList is returned', async () => {
       const username = 'testuser';
       const metrics = require('../../modules/observability/metrics');
 
@@ -271,7 +272,7 @@ describe('RandomAnimeService', () => {
       const successCalls = metrics.trackApiRequest.mock.calls.filter(
         (call) => call[1] === 'success',
       );
-      expect(successCalls).toHaveLength(0);
+      expect(successCalls).toHaveLength(2);
     });
   });
 
@@ -363,7 +364,7 @@ describe('RandomAnimeService', () => {
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
 
-    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+    test('should fall back to editReply with the deferred visibility when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         editReply: jest
           .fn()
@@ -377,7 +378,6 @@ describe('RandomAnimeService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true,
       });
     });
 
@@ -389,7 +389,7 @@ describe('RandomAnimeService', () => {
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleRandomAnimeCommand(interaction)).resolves.toBeUndefined();
+      await expect(service.handleRandomAnimeCommand(interaction)).resolves.toBe(false);
 
       expect(metrics.trackError).toHaveBeenCalledWith('Error', 'anime_random');
       expect(logger.error).toHaveBeenCalledWith(
@@ -509,13 +509,13 @@ describe('RandomAnimeService', () => {
 
   describe('isValidHttpUrl', () => {
     test('should accept https and http URLs', () => {
-      expect(service.isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
-      expect(service.isValidHttpUrl('http://example.com')).toBe(true);
+      expect(isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
+      expect(isValidHttpUrl('http://example.com')).toBe(true);
     });
 
     test('should reject other schemes and malformed strings', () => {
-      expect(service.isValidHttpUrl('ftp://example.com/file')).toBe(false);
-      expect(service.isValidHttpUrl('not a url')).toBe(false);
+      expect(isValidHttpUrl('ftp://example.com/file')).toBe(false);
+      expect(isValidHttpUrl('not a url')).toBe(false);
     });
   });
 });

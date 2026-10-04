@@ -1,3 +1,4 @@
+const { isValidHttpUrl } = require('../../modules/shared/embedHelpers');
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
 const RandomMangaService = require('../../modules/commands/RandomMangaService');
@@ -272,7 +273,7 @@ describe('RandomMangaService', () => {
       await expect(service.fetchRandomManga(username)).rejects.toThrow();
     });
 
-    test('does not track success when the API returns no MediaList', async () => {
+    test('counts both HTTP responses even when no MediaList is returned', async () => {
       const username = 'testuser';
       const metrics = require('../../modules/observability/metrics');
 
@@ -293,7 +294,7 @@ describe('RandomMangaService', () => {
       const successCalls = metrics.trackApiRequest.mock.calls.filter(
         (call) => call[1] === 'success',
       );
-      expect(successCalls).toHaveLength(0);
+      expect(successCalls).toHaveLength(2);
     });
   });
 
@@ -388,7 +389,7 @@ describe('RandomMangaService', () => {
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
 
-    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+    test('should fall back to editReply with the deferred visibility when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'mangarandom',
         editReply: jest
@@ -403,7 +404,6 @@ describe('RandomMangaService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true,
       });
     });
 
@@ -416,7 +416,7 @@ describe('RandomMangaService', () => {
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleRandomMangaCommand(interaction)).resolves.toBeUndefined();
+      await expect(service.handleRandomMangaCommand(interaction)).resolves.toBe(false);
 
       expect(metrics.trackError).toHaveBeenCalledWith('Error', 'manga_random');
       expect(logger.error).toHaveBeenCalledWith(
@@ -552,13 +552,13 @@ describe('RandomMangaService', () => {
 
   describe('isValidHttpUrl', () => {
     test('should accept https and http URLs', () => {
-      expect(service.isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
-      expect(service.isValidHttpUrl('http://example.com')).toBe(true);
+      expect(isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
+      expect(isValidHttpUrl('http://example.com')).toBe(true);
     });
 
     test('should reject other schemes and malformed strings', () => {
-      expect(service.isValidHttpUrl('ftp://example.com/file')).toBe(false);
-      expect(service.isValidHttpUrl('not a url')).toBe(false);
+      expect(isValidHttpUrl('ftp://example.com/file')).toBe(false);
+      expect(isValidHttpUrl('not a url')).toBe(false);
     });
   });
 });

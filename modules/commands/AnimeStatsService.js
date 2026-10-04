@@ -1,4 +1,5 @@
-const axios = require('axios');
+const anilistRequest = require('../shared/anilistRequest');
+const replyError = require('../shared/replyError');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../observability/logger');
 const metricsService = require('../observability/metrics');
@@ -29,13 +30,11 @@ class AnimeStatsService {
 
   async fetchUserAnimeStats(username) {
     try {
-      metricsService.trackApiRequest('anime_stats', 'started', username);
-
       // Check cache first
       const cachedStats = this.cache.get(`stats_${username}`);
       if (cachedStats) {
         metricsService.trackCacheHit('anime_stats');
-        metricsService.trackApiRequest('anime_stats', 'cache_hit', username);
+
         return cachedStats;
       }
       const query = `
@@ -46,7 +45,6 @@ class AnimeStatsService {
                 }
                 MediaListCollection(userName: $username, type: ANIME) {
                     lists {
-                        name
                         entries {
                             status
                             score
@@ -59,24 +57,10 @@ class AnimeStatsService {
             }
             `;
 
-      const response = await axios.post(
-        'https://graphql.anilist.co',
-        {
-          query,
-          variables: { username },
-        },
-        {
-          signal: AbortSignal.timeout(10000),
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        },
-      );
+      const response = await anilistRequest(query, { username }, 'anime_stats', username);
       if (!response.data.data.User) {
         throw new Error(`User ${username} not found on AniList`);
       }
-      metricsService.trackApiRequest('anime_stats', 'success', username);
 
       const lists = response.data.data.MediaListCollection.lists;
 
@@ -119,7 +103,7 @@ class AnimeStatsService {
       return this.cache.set(`stats_${username}`, stats);
     } catch (error) {
       metricsService.trackError('fetch_failure', 'anime_stats');
-      metricsService.trackApiRequest('anime_stats', 'failure', username);
+
       logger.error('Anime stats fetch failed', {
         username,
         errorMessage: error.message,
@@ -190,7 +174,7 @@ class AnimeStatsService {
         await interaction.editReply({
           content: '❌ Please provide a valid AniList username.',
         });
-        return;
+        return false;
       }
 
       try {
@@ -200,8 +184,8 @@ class AnimeStatsService {
 
         await interaction.editReply({
           embeds: [statsEmbed],
-          ephemeral: false,
         });
+        return true;
       } catch (fetchError) {
         logger.error('Anime stats command processing error', {
           username,
@@ -217,6 +201,7 @@ class AnimeStatsService {
             - AniList API temporarily unavailable
             - Network connectivity issues`,
         });
+        return false;
       }
     } catch (globalError) {
       // Last-resort error handling
@@ -225,26 +210,12 @@ class AnimeStatsService {
         errorStack: globalError.stack,
       });
 
-      try {
-        // Final attempt to respond to interaction
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: '❌ An unexpected error occurred. Please try again later.',
-            ephemeral: true,
-          });
-        } else if (interaction.deferred) {
-          await interaction.editReply({
-            content: '❌ An unexpected error occurred. Please try again later.',
-            ephemeral: true,
-          });
-        }
-      } catch (replyError) {
-        // If all else fails, log the error
-        logger.error('Failed to send final error message', {
-          originalError: globalError,
-          replyError,
-        });
-      }
+      await replyError(
+        interaction,
+        '❌ An unexpected error occurred. Please try again later.',
+        globalError,
+      );
+      return false;
     }
   }
 }

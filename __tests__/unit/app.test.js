@@ -156,8 +156,6 @@ describe('AniListDiscordBot', () => {
       expect(mockApp.listen).toHaveBeenCalledWith('9911', expect.any(Function));
       expect(bot.httpServer).toBe(mockServer);
       expect(bot.isShuttingDown).toBe(false);
-      expect(bot.accessToken).toBeNull();
-      expect(bot.tokenExpiresAt).toBe(0);
     });
 
     test('logs in to Discord during setup', () => {
@@ -249,6 +247,25 @@ describe('AniListDiscordBot', () => {
 
       const endTimer = metrics.trackCommand.mock.results[0].value;
       expect(endTimer).toHaveBeenCalledWith('success');
+    });
+
+    test('records a handled fetch failure from a real service as failure', async () => {
+      const service = new mockRealRandom();
+      jest.spyOn(service, 'fetchRandomAnime').mockRejectedValue(new Error('AniList unavailable'));
+      const originalHandler = bot.commandHandlers.get('animerandom');
+      bot.commandHandlers.set('animerandom', { ...originalHandler, service });
+      const interaction = createMockInteraction();
+      try {
+        await onInteractionCreate()(interaction);
+        expect(interaction.editReply).toHaveBeenCalledWith({
+          content: expect.stringContaining('Error fetching anime'),
+        });
+        expect(
+          require('../../modules/observability/metrics').trackCommand.mock.results[0].value,
+        ).toHaveBeenCalledWith('failure');
+      } finally {
+        service.cache.destroy();
+      }
     });
 
     test('ends the timer with failure and logs when the handler throws', async () => {

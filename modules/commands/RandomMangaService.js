@@ -1,4 +1,6 @@
-const axios = require('axios');
+const { cleanDescription: sanitizeDescription, isValidHttpUrl } = require('../shared/embedHelpers');
+const anilistRequest = require('../shared/anilistRequest');
+const replyError = require('../shared/replyError');
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
 const logger = require('../observability/logger');
 const metricsService = require('../observability/metrics');
@@ -29,8 +31,6 @@ class RandomMangaService {
 
   async fetchRandomManga(username) {
     try {
-      metricsService.trackApiRequest('manga_random', 'started', username);
-
       const query_ids = `
             query ($username: String) {
                 User(name: $username) {
@@ -85,21 +85,12 @@ class RandomMangaService {
 
       if (allIDs) {
         metricsService.trackCacheHit('manga_random');
-        metricsService.trackApiRequest('manga_random', 'cache_hit', username);
       } else {
-        const response_ids = await axios.post(
-          'https://graphql.anilist.co',
-          {
-            query: query_ids,
-            variables: { username },
-          },
-          {
-            signal: AbortSignal.timeout(10000),
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            },
-          },
+        const response_ids = await anilistRequest(
+          query_ids,
+          { username },
+          'manga_random',
+          username,
         );
 
         if (!response_ids.data.data.User) {
@@ -122,24 +113,15 @@ class RandomMangaService {
 
       const id = randomID;
 
-      const response_manga = await axios.post(
-        'https://graphql.anilist.co',
-        {
-          query: query_manga,
-          variables: { username, id },
-        },
-        {
-          signal: AbortSignal.timeout(10000),
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        },
+      const response_manga = await anilistRequest(
+        query_manga,
+        { username, id },
+        'manga_random',
+        username,
       );
       if (!response_manga.data.data.MediaList) {
         throw new Error(`No manga data found for user ${username}`);
       }
-      metricsService.trackApiRequest('manga_random', 'success', username);
 
       const randomManga = response_manga.data.data.MediaList;
 
@@ -159,6 +141,7 @@ class RandomMangaService {
           randomManga.media.coverImage.extraLarge || randomManga.media.coverImage.large || null,
       };
     } catch (error) {
+      metricsService.trackError('fetch_failure', 'manga_random');
       logger.error('Manga fetch failed', {
         username,
         errorMessage: error.message,
@@ -170,12 +153,7 @@ class RandomMangaService {
 
   createMangaEmbed(manga) {
     // Clean up description
-    const cleanDescription = manga.description
-      ? manga.description
-          .replace(/<\/?[^>]+(>|$)/g, '')
-          .replace(/\s+/g, ' ')
-          .trim()
-      : 'No description available';
+    const cleanDescription = sanitizeDescription(manga.description);
 
     // Direct link to the specific manga page using its ID
     const mangaDirectLink = `https://anilist.co/manga/${manga.id}`;
@@ -261,20 +239,11 @@ class RandomMangaService {
       });
 
     // Add thumbnail only if a valid image URL exists
-    if (manga.coverImage && this.isValidHttpUrl(manga.coverImage)) {
+    if (manga.coverImage && isValidHttpUrl(manga.coverImage)) {
       embedBuilder.setImage(manga.coverImage);
     }
 
     return embedBuilder;
-  }
-
-  isValidHttpUrl(string) {
-    try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch (_) {
-      return false;
-    }
   }
 
   async handleRandomMangaCommand(interaction) {
@@ -294,7 +263,7 @@ class RandomMangaService {
         await interaction.editReply({
           content: '❌ Please provide a valid AniList username.',
         });
-        return;
+        return false;
       }
 
       try {
@@ -304,8 +273,8 @@ class RandomMangaService {
 
         await interaction.editReply({
           embeds: [embed],
-          ephemeral: false,
         });
+        return true;
       } catch (fetchError) {
         logger.error('Manga command processing error', {
           username,
@@ -321,36 +290,22 @@ class RandomMangaService {
         - AniList API temporarily unavailable
         - Network connectivity issues`,
         });
+        return false;
       }
     } catch (globalError) {
+      metricsService.trackError(globalError.name, 'manga_random');
       // Last-resort error handling
       logger.error('Critical error in manga command', {
         errorMessage: globalError.message,
         errorStack: globalError.stack,
       });
 
-      try {
-        // Final attempt to respond to interaction
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: '❌ An unexpected error occurred. Please try again later.',
-            ephemeral: true,
-          });
-        } else if (interaction.deferred) {
-          await interaction.editReply({
-            content: '❌ An unexpected error occurred. Please try again later.',
-            ephemeral: true,
-          });
-        }
-      } catch (replyError) {
-        // If all else fails, log the error
-        metricsService.trackError(globalError.name || 'unknown_error', 'manga_random');
-        metricsService.trackApiRequest('manga_random', 'failure', username);
-        logger.error('Failed to send final error message', {
-          originalError: globalError,
-          replyError,
-        });
-      }
+      await replyError(
+        interaction,
+        '❌ An unexpected error occurred. Please try again later.',
+        globalError,
+      );
+      return false;
     }
   }
 }

@@ -460,7 +460,7 @@ describe('AnimeRecommendationService', () => {
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
 
-    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+    test('should fall back to editReply with the deferred visibility when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'animerecommend',
         editReply: jest
@@ -475,7 +475,6 @@ describe('AnimeRecommendationService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true,
       });
     });
 
@@ -487,7 +486,7 @@ describe('AnimeRecommendationService', () => {
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleAnimeRecommendCommand(interaction)).resolves.toBeUndefined();
+      await expect(service.handleAnimeRecommendCommand(interaction)).resolves.toBe(false);
 
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to send final error message',

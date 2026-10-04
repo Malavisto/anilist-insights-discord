@@ -216,7 +216,7 @@ describe('AnimeCoverService', () => {
       expect(mockInteraction.editReply).toHaveBeenCalledWith(
         expect.stringMatching(/No cover image found/i),
       );
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_cover', 'failure', 'testuser');
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_cover', 'success', 'testuser');
     });
 
     test('should send embed with cover image on success', async () => {
@@ -274,7 +274,7 @@ describe('AnimeCoverService', () => {
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleAnimeCoverCommand(mockInteraction)).resolves.toBeUndefined();
+      await expect(service.handleAnimeCoverCommand(mockInteraction)).resolves.toBe(false);
 
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to send final error message',

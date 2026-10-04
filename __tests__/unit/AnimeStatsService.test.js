@@ -210,7 +210,7 @@ describe('AnimeStatsService', () => {
 
       expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_stats', 'started', username);
     });
-    test('does not track success when the user does not exist', async () => {
+    test('counts the HTTP response separately from a missing user', async () => {
       const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -225,7 +225,7 @@ describe('AnimeStatsService', () => {
       const successCalls = metrics.trackApiRequest.mock.calls.filter(
         (call) => call[1] === 'success',
       );
-      expect(successCalls).toHaveLength(0);
+      expect(successCalls).toHaveLength(1);
     });
   });
 
@@ -303,7 +303,7 @@ describe('AnimeStatsService', () => {
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
 
-    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+    test('should fall back to editReply with the deferred visibility when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'animestats',
         editReply: jest
@@ -318,7 +318,6 @@ describe('AnimeStatsService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true,
       });
     });
 
@@ -331,7 +330,7 @@ describe('AnimeStatsService', () => {
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleAnimeStatsCommand(interaction)).resolves.toBeUndefined();
+      await expect(service.handleAnimeStatsCommand(interaction)).resolves.toBe(false);
 
       // The stats final catch logs only - no metrics are tracked there
       expect(metrics.trackApiRequest).not.toHaveBeenCalled();
