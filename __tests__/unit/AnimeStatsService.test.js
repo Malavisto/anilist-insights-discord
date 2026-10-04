@@ -306,7 +306,7 @@ describe('AnimeStatsService', () => {
       await service.handleAnimeStatsCommand(fresh);
       await service.handleAnimeStatsCommand(cached);
       expect(footer(fresh)).toBe('Stats fetched from AniList');
-      expect(footer(cached)).toBe('Stats served from cache');
+      expect(footer(cached)).toBe('Stats served from Cache');
       expect(mockAdapter.history.post).toHaveLength(1);
 
       const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + service.cache.ttl + 1);
