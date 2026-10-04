@@ -4,22 +4,22 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Project Overview
 
-A Discord bot (discord.js v14) that answers `/animerandom`, `/mangarandom`, `/animestats`, `/animerecommend`, and `/animecover` slash commands by querying the AniList GraphQL API. Plain CommonJS Node.js (24+), installed with nvm with no build step or TypeScript; package manager is pnpm, pinned via `packageManager`.
+A Discord bot (discord.js v14) that answers `/animerandom`, `/mangarandom`, `/animestats`, `/animerecommend`, and `/animecover` slash commands by querying the AniList GraphQL API. Plain CommonJS Bun (1.4.x).
 
 ## Commands
 
 ```bash
-pnpm install                # deps
-pnpm start                  # run the bot (needs DISCORD_TOKEN in .env)
-pnpm test                   # full Jest suite
-pnpm test:unit              # or :integration / :e2e by tier
-pnpm test:coverage          # enforces thresholds (60% branches/functions, 70% lines/statements)
-pnpm test -- CacheService.test.js        # single file
-pnpm test -- CacheService.test.js -t "test name"   # single case
-pnpm bot:start|stop|status|attach      # tmux session `anilist-bot`; stop sends SIGINT for graceful shutdown
+bun install                # deps
+bun start                  # run the bot (needs DISCORD_TOKEN in .env)
+bun run test                   # full Jest suite
+bun run test:unit              # or :integration / :e2e by tier
+bun run test:coverage          # enforces thresholds (60% branches/functions, 70% lines/statements)
+bun run test -- CacheService.test.js        # single file
+bun run test -- CacheService.test.js -t "test name"   # single case
+bun bot:start|stop|status|attach      # tmux session `anilist-bot`; stop sends SIGINT for graceful shutdown
 ```
 
-Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-mock-adapter`. There is no local lint/typecheck script; CI's ESLint step is deliberately non-blocking (`|| true`), so the Jest tiers are the meaningful checks.
+Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-mock-adapter`. ESLint (flat config in `eslint.config.mjs`) and Prettier are wired up via the `lint` / `lint:fix` / `format` / `format:check` scripts, and CI's lint job is blocking.
 
 ## Architecture
 

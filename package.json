@@ -3,13 +3,17 @@
   "version": "1.4.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "bun app.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:unit": "jest --testPathPatterns=unit",
     "test:integration": "jest --testPathPatterns=integration",
     "test:e2e": "jest --testPathPatterns=e2e",
     "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "bot:start": "bash scripts/bot.sh start",
     "bot:stop": "bash scripts/bot.sh stop",
     "bot:status": "bash scripts/bot.sh status",
@@ -23,14 +27,17 @@
     "@prometheus-io/client": "^0.16.1",
     "axios": "^1.15.0",
     "discord.js": "^14.27.0",
-    "dotenv": "^18.0.0",
     "express": "^5.2.1",
     "winston": "^3.19.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
     "axios-mock-adapter": "^2.0.0",
-    "jest": "^30.0.0"
-  },
-  "packageManager": "pnpm@12.7.0"
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.9.9"
+  }
 }

@@ -2,7 +2,6 @@
 
 A Discord bot that connects with [AniList](https://anilist.co/) to do multiple tasks based on a user's AniList profile.
 
-
 ## Disclaimers
 
 This project was made as an testing ground for [me](https://github.com/malavisto) to experiment with AI, I do try to maintain the repo on my own though
@@ -24,11 +23,11 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) version 24 with nvm or later installed or [Docker](https://www.docker.com/) with docker compose.
+1. [Bun](https://bun.com/) version 4.1.0 or later installed or [Docker](https://www.docker.com/) with docker compose.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
-4. Install dependencies **NodeJS Only**:
+3. Install dependencies **Bun Only**:
    ```
-   pnpm install
+   bun install
    ```
 
 ### Configuration
@@ -48,9 +47,11 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 Start the bot by running:
 
 ```
-pnpm start
+bun start
 ```
-or 
+
+or
+
 ```
 docker compose up -d
 ```
@@ -60,46 +61,50 @@ The bot will log in and register the commands in all the servers it's added to.
 To run it in the background with tmux:
 
 ```
-pnpm bot:start
-pnpm bot:stop
-pnpm bot:status
-pnpm bot:attach
+bun bot:start
+bun bot:stop
+bun bot:status
+bun bot:attach
 ```
 
-`pnpm bot:stop` sends a clean shutdown signal so Discord sees the bot disconnect properly.
+`bun bot:stop` sends a clean shutdown signal so Discord sees the bot disconnect properly.
 
 ## Usage
 
 ### Random Anime
+
 1. Use the `/animerandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random anime from your AniList and display its details in an embed.
 
 ### Random Manga
+
 1. Use the `/mangarandom` command in Discord and provide your AniList username.
 2. The bot will fetch a random manga from your AniList and display its details in an embed.
 
 ### Anime Recomendations
+
 1. Use the `/animerecommend` command in Discord and provide your AniList username.
 2. The bot generate recomendations based on your anilist and pick one out of five anime and display its details in an embed.
 
 ### Anime Stats
+
 1. Use the `/animestats` command in Discord and provide your AniList username.
 2. The bot will generate stats from your AniList and display them an embed.
 
 ### Anime Cover (Not used much)
+
 1. Use the `/animecover` command in discord and provide an AniList anime ID
 2. The bot will fetch the cover and serve an embed with the link
-
 
 ## Development
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) version 24 or later installed.
+1. [Bun](https://bun.com/) version 4.1.0 or later installed.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
-4. Install dependencies:
+3. Install dependencies:
    ```
-   pnpm install
+   bun install
    ```
 
 ### Configuration
@@ -119,16 +124,16 @@ pnpm bot:attach
 Start the bot by running:
 
 ```
-pnpm start
+bun start
 ```
 
 Or use the tmux wrapper for background runs:
 
 ```
-pnpm bot:start
-pnpm bot:stop
-pnpm bot:status
-pnpm bot:attach
+bun bot:start
+bun bot:stop
+bun bot:status
+bun bot:attach
 ```
 
 ## Development Notes

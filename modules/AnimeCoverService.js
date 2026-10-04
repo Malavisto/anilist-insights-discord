@@ -6,32 +6,32 @@ const logger = require('../logger');
 const metricsService = require('../metrics');
 
 class AnimeCoverService {
+  // /animecover slash-command
+  static get commandDefinition() {
+    return {
+      builder: new SlashCommandBuilder()
+        .setName('animecover')
+        .setDescription('Get the cover image for an anime by ID')
+        .addStringOption((option) =>
+          option
+            .setName('animeid')
+            .setDescription('AniList anime ID to fetch cover from')
+            .setRequired(true),
+        ),
+      methodName: 'handleAnimeCoverCommand',
+      metricName: 'anime_cover',
+    };
+  }
 
-    // /animecover slash-command
-    static get commandDefinition() {
-        return {
-            builder: new SlashCommandBuilder()
-                .setName('animecover')
-                .setDescription('Get the cover image for an anime by ID')
-                .addStringOption(option =>
-                    option.setName('animeid')
-                        .setDescription('AniList anime ID to fetch cover from')
-                        .setRequired(true)
-                ),
-            methodName: 'handleAnimeCoverCommand',
-            metricName: 'anime_cover'
-        };
-    }
-
-    /**
-     * Fetch a high-quality anime cover image by ID from AniList.
-     * Returns the extraLarge cover image URL or null if not found.
-     * Uses logger and metricsService similar to existing modules.
-     * @param {number} animeId 
-     * @param {string} username - Discord username for metrics logging
-     */
-    async fetchAnimeCoverById(animeId, username) {
-        const query = `
+  /**
+   * Fetch a high-quality anime cover image by ID from AniList.
+   * Returns the extraLarge cover image URL or null if not found.
+   * Uses logger and metricsService similar to existing modules.
+   * @param {number} animeId
+   * @param {string} username - Discord username for metrics logging
+   */
+  async fetchAnimeCoverById(animeId, username) {
+    const query = `
             query ($id: Int) {
                 Media(id: $id, type: ANIME) {
                     coverImage {
@@ -41,111 +41,110 @@ class AnimeCoverService {
             }
         `;
 
-        try {
-            const response = await axios.post(
-                'https://graphql.anilist.co',
-                {
-                    query,
-                    variables: { id: parseInt(animeId) }
-                },
-                {
-                    signal: AbortSignal.timeout(10000),
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                }
-            );
+    try {
+      const response = await axios.post(
+        'https://graphql.anilist.co',
+        {
+          query,
+          variables: { id: parseInt(animeId) },
+        },
+        {
+          signal: AbortSignal.timeout(10000),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
 
-            const result = response.data?.data?.Media?.coverImage?.extraLarge || null;
-            return result;
-        } catch (error) {
-            logger.error('Failed to fetch anime cover', {
-                username,
-                errorMessage: error.message,
-                errorStack: error.stack
-            });
-            // Track an error event and API request status
-            metricsService.trackError('cover_fetch_failure', 'anime_cover');
-            metricsService.trackApiRequest('anime_cover', 'failure', username);
+      const result = response.data?.data?.Media?.coverImage?.extraLarge || null;
+      return result;
+    } catch (error) {
+      logger.error('Failed to fetch anime cover', {
+        username,
+        errorMessage: error.message,
+        errorStack: error.stack,
+      });
+      // Track an error event and API request status
+      metricsService.trackError('cover_fetch_failure', 'anime_cover');
+      metricsService.trackApiRequest('anime_cover', 'failure', username);
 
-            throw error; // Let the caller handle response
-        }
+      throw error; // Let the caller handle response
     }
+  }
 
-    /**
-     * Handles the slash command interaction for fetching and displaying the anime cover.
-     * Follows the same logger & metrics pattern as existing modules.
-     * @param {CommandInteraction} interaction 
-     */
-    async handleAnimeCoverCommand(interaction) {
-        const username = interaction.user.username;
-        let coverImage = null;
+  /**
+   * Handles the slash command interaction for fetching and displaying the anime cover.
+   * Follows the same logger & metrics pattern as existing modules.
+   * @param {CommandInteraction} interaction
+   */
+  async handleAnimeCoverCommand(interaction) {
+    const username = interaction.user.username;
+    let coverImage;
 
-        try {
-            // Defer in case the external API call takes some time
-            await interaction.deferReply();
+    try {
+      // Defer in case the external API call takes some time
+      await interaction.deferReply();
 
-            // Get animeId from the slash command's options
-            // Fixed: Using getString instead of getInteger since the option is defined as STRING type
-            const animeIdStr = interaction.options.getString('animeid');
-            // Validate that input contains only digits
-            if (!animeIdStr || !/^\d+$/.test(animeIdStr)) {
-                await interaction.editReply('Please provide a valid anime ID (numbers only).');
-                return;
-            }
+      // Get animeId from the slash command's options
+      // Fixed: Using getString instead of getInteger since the option is defined as STRING type
+      const animeIdStr = interaction.options.getString('animeid');
+      // Validate that input contains only digits
+      if (!animeIdStr || !/^\d+$/.test(animeIdStr)) {
+        await interaction.editReply('Please provide a valid anime ID (numbers only).');
+        return;
+      }
 
-            const animeId = parseInt(animeIdStr);
+      const animeId = parseInt(animeIdStr);
 
-            // Attempt to fetch the cover
-            coverImage = await this.fetchAnimeCoverById(animeId, username);
+      // Attempt to fetch the cover
+      coverImage = await this.fetchAnimeCoverById(animeId, username);
 
-            // If we have a cover, send success metrics, else fail gracefully
-            if (!coverImage) {
-                // Possibly track as a "failure" due to no cover
-                metricsService.trackApiRequest('anime_cover', 'failure', username);
-                await interaction.editReply('No cover image found for that anime ID.');
-                return;
-            }
+      // If we have a cover, send success metrics, else fail gracefully
+      if (!coverImage) {
+        // Possibly track as a "failure" due to no cover
+        metricsService.trackApiRequest('anime_cover', 'failure', username);
+        await interaction.editReply('No cover image found for that anime ID.');
+        return;
+      }
 
-            // We have a successful response
-            metricsService.trackApiRequest('anime_cover', 'success', username);
+      // We have a successful response
+      metricsService.trackApiRequest('anime_cover', 'success', username);
 
-            // Construct embed with the fetched cover image
-            const embed = new EmbedBuilder()
-                .setTitle(`Anime Cover for ID: ${animeId}`)
-                .setImage(coverImage);
+      // Construct embed with the fetched cover image
+      const embed = new EmbedBuilder()
+        .setTitle(`Anime Cover for ID: ${animeId}`)
+        .setImage(coverImage);
 
-            await interaction.editReply({ embeds: [embed] });
-            
-        } catch (globalError) {
-            logger.error('Critical error in anime cover command', {
-                username,
-                errorMessage: globalError.message,
-                errorStack: globalError.stack
-            });
+      await interaction.editReply({ embeds: [embed] });
+    } catch (globalError) {
+      logger.error('Critical error in anime cover command', {
+        username,
+        errorMessage: globalError.message,
+        errorStack: globalError.stack,
+      });
 
-            try {
-                // Attempt to send an error message
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({
-                        content: "❌ An error occurred while fetching the anime cover.",
-                        ephemeral: true
-                    });
-                } else if (interaction.deferred) {
-                    await interaction.editReply({
-                        content: "❌ An error occurred while fetching the anime cover.",
-                        ephemeral: true
-                    });
-                }
-            } catch (replyError) {
-                logger.error('Failed to send final error message', {
-                    username,
-                    originalError: globalError,
-                    replyError
-                });
-            }
+      try {
+        // Attempt to send an error message
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '❌ An error occurred while fetching the anime cover.',
+            ephemeral: true,
+          });
+        } else if (interaction.deferred) {
+          await interaction.editReply({
+            content: '❌ An error occurred while fetching the anime cover.',
+            ephemeral: true,
+          });
         }
+      } catch (replyError) {
+        logger.error('Failed to send final error message', {
+          username,
+          originalError: globalError,
+          replyError,
+        });
+      }
     }
+  }
 }
 
 module.exports = AnimeCoverService;

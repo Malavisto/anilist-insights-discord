@@ -14,30 +14,30 @@
  * `options` object, e.g. createMockInteraction({ options: { getString: jest.fn() } }).
  */
 function createMockInteraction(overrides = {}) {
-    const interaction = {
-        commandName: 'animerandom',
-        guildId: 'guild-123',
-        user: { username: 'testuser', id: 'user-123' },
-        options: {
-            getString: jest.fn().mockReturnValue('testuser')
-        },
-        deferred: false,
-        replied: false,
-        deferReply: jest.fn(),
-        editReply: jest.fn().mockResolvedValue(undefined),
-        reply: jest.fn().mockResolvedValue(undefined),
-        isChatInputCommand: jest.fn().mockReturnValue(true),
-        ...overrides
-    };
+  const interaction = {
+    commandName: 'animerandom',
+    guildId: 'guild-123',
+    user: { username: 'testuser', id: 'user-123' },
+    options: {
+      getString: jest.fn().mockReturnValue('testuser'),
+    },
+    deferred: false,
+    replied: false,
+    deferReply: jest.fn(),
+    editReply: jest.fn().mockResolvedValue(undefined),
+    reply: jest.fn().mockResolvedValue(undefined),
+    isChatInputCommand: jest.fn().mockReturnValue(true),
+    ...overrides,
+  };
 
-    if (!overrides.deferReply) {
-        interaction.deferReply.mockImplementation(() => {
-            interaction.deferred = true;
-            return Promise.resolve();
-        });
-    }
+  if (!overrides.deferReply) {
+    interaction.deferReply.mockImplementation(() => {
+      interaction.deferred = true;
+      return Promise.resolve();
+    });
+  }
 
-    return interaction;
+  return interaction;
 }
 
 module.exports = { createMockInteraction };

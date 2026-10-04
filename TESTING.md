@@ -5,11 +5,13 @@ This project uses a comprehensive three-tier testing strategy with Jest to ensur
 ## Test Tiers
 
 ### 1. Unit Tests
+
 **Location:** `__tests__/unit/`
 
 Unit tests focus on testing individual services and modules in isolation. They use mocked function dependencies to ensure each unit behaves correctly independently.
 
 **What's Mainly Tested:**
+
 - CacheService: TTL expiration, cache hits/misses, statistics
 - RandomAnimeService: Anime fetching, list caching, error handling
 - RandomMangaService: Manga fetching, ID-list caching, error handling
@@ -19,21 +21,24 @@ Unit tests focus on testing individual services and modules in isolation. They u
 - AnilistDiscordBot: Bot initialization, command registration, interaction handling, metrics and shutdown sequence
 
 **What's tested but deemed lower priority**
+
 - Logger: winston export, console output and record taging
 - MetricsService: Command tracking, user privacy, consitent stats updates and cache tracking
 
-
 **Run unit tests:**
+
 ```bash
-pnpm test:unit
+bun run test:unit
 ```
 
 ### 2. Integration Tests
+
 **Location:** `__tests__/integration/`
 
 Integration tests verify that multiple services work correctly together. They test real interactions between services with mocked API calls.
 
 **What's Tested:**
+
 - Service interactions (e.g., RandomAnimeService with CacheService)
 - Cache consistency across service boundaries
 - Error propagation through service layers
@@ -41,16 +46,19 @@ Integration tests verify that multiple services work correctly together. They te
 - Service lifecycle management
 
 **Run integration tests:**
+
 ```bash
-pnpm test:integration
+bun run test:integration
 ```
 
 ### 3. E2E Tests
+
 **Location:** `__tests__/e2e/`
 
 End-to-end tests simulate complete command execution flows, verifying that all components work together to produce correct bot responses.
 
 **What's Tested:**
+
 - `/animerandom` command flow
 - `/mangarandom` command flow
 - `/animestats` command flow
@@ -59,28 +67,33 @@ End-to-end tests simulate complete command execution flows, verifying that all c
 - Error scenarios and graceful handling
 
 **Run E2E tests:**
+
 ```bash
-pnpm test:e2e
+bun run test:e2e
 ```
 
 ## Running Tests Locally
 
 ### Run all tests
+
 ```bash
-pnpm test
+bun run test
 ```
 
 ### Run tests in watch mode (recommended for development)
+
 ```bash
-pnpm test:watch
+bun run test:watch
 ```
 
 ### Generate coverage reports
+
 ```bash
-pnpm test:coverage
+bun run test:coverage
 ```
 
 Coverage reports are saved to `coverage/` directory. Thresholds:
+
 - Branches: 60%
 - Functions: 60%
 - Lines: 70%
@@ -89,15 +102,18 @@ Coverage reports are saved to `coverage/` directory. Thresholds:
 ## Test Environment Setup
 
 ### Prerequisites
+
 - Node.js 24+ (matches the bot's runtime and the CI matrix)
-- pnpm 12.x (pinned via `packageManager` in `package.json`)
+- bun run 12.x (pinned via `packageManager` in `package.json`)
 
 ### Install dependencies
+
 ```bash
-pnpm install
+bun run install
 ```
 
 All testing dependencies are included in `devDependencies`:
+
 - **jest**: Test framework
 - **@types/jest**: Jest TypeScript definitions
 - **axios-mock-adapter**: Mock HTTP requests for testing
@@ -105,6 +121,7 @@ All testing dependencies are included in `devDependencies`:
 ## GitHub Actions CI Pipeline
 
 The project includes a complete GitHub Actions workflow (`.github/workflows/test.yml`) that runs on:
+
 - **Triggers:** Push to `dev`/`renovate/**` branches, PRs to `main`/`dev`
 - **Node versions:** 24.x (single-version matrix)
 - **Test job steps:**
@@ -116,37 +133,43 @@ The project includes a complete GitHub Actions workflow (`.github/workflows/test
 
 A separate **lint** job runs ESLint non-blockingly (`|| true`), so the Jest steps are the meaningful checks.
 
-
 ## Test Data Strategy
 
 ### Mocking APIs
+
 - **Unit Tests:** All external API calls are mocked using `axios-mock-adapter`
 - **Integration Tests:** API calls are mocked, but service interactions are real
 - **E2E Tests:** API calls are mocked to simulate real responses
 
 Test data uses real AniList anime IDs for consistency:
+
 - **Common test anime:** Cowboy Bebop (ID: 1), Fullmetal Alchemist (ID: 5)
 - **Mock user:** `testuser`
 
 ## Debugging Tests
 
 ### Run a single test file
+
 ```bash
-pnpm test -- CacheService.test.js
+bun run test -- CacheService.test.js
 ```
 
 ### Run a single test case
+
 ```bash
-pnpm test -- CacheService.test.js -t "should store and retrieve a value"
+bun run test -- CacheService.test.js -t "should store and retrieve a value"
 ```
 
 ### Enable verbose output
+
 ```bash
-pnpm test -- --verbose
+bun run test -- --verbose
 ```
 
 ### Debug in VS Code
+
 Add to `.vscode/launch.json`:
+
 ```json
 {
   "type": "node",
@@ -161,6 +184,7 @@ Add to `.vscode/launch.json`:
 ## Adding New Tests
 
 ### Test File Structure
+
 ```
 __tests__/
 ├── unit/
@@ -176,6 +200,7 @@ __tests__/
 ```
 
 ### Writing a New Unit Test
+
 ```javascript
 // __tests__/unit/MyService.test.js
 const MyService = require('../../modules/MyService');
@@ -198,6 +223,7 @@ describe('MyService', () => {
 ```
 
 ### Testing Async Operations
+
 ```javascript
 test('should fetch data', async () => {
   const result = await service.fetchData();
@@ -206,6 +232,7 @@ test('should fetch data', async () => {
 ```
 
 ### Mocking External Calls
+
 ```javascript
 const MockAdapter = require('axios-mock-adapter');
 const axios = require('axios');
@@ -213,13 +240,14 @@ const axios = require('axios');
 const mockAdapter = new MockAdapter(axios);
 
 mockAdapter.onPost('https://api.example.com').replyOnce(200, {
-  data: { /* mocked response */ }
+  data: {/* mocked response */},
 });
 ```
 
 ## Test Metrics
 
 Current test coverage:
+
 - **Total Tests:** 199
 - **Unit Tests:** 170
 - **Integration Tests:** 12
@@ -229,6 +257,7 @@ Current test coverage:
 ## Performance
 
 Typical test execution times:
+
 - Unit tests: ~1.3 seconds
 - Integration tests: ~0.5 seconds
 - E2E tests: ~0.5 seconds
@@ -237,10 +266,12 @@ Typical test execution times:
 ## Continuous Improvement
 
 ### Known Limitations
+
 - E2E tests use mocked Discord interactions (real bot would require dedicated test environment)
 - API responses are mocked (no actual AniList API calls in CI)
 
 ### Future Enhancements
+
 - Add snapshot testing for embed outputs
 - Implement performance benchmarks
 - Add memory leak detection
@@ -250,16 +281,19 @@ Typical test execution times:
 ## Troubleshooting
 
 ### Tests fail locally but pass in CI
+
 - Ensure Node version matches CI matrix (24.x)
-- Clear cache: `rm -rf node_modules pnpm-lock.yaml && pnpm install`
+- Clear cache: `rm -rf node_modules bun.lock && bun install`
 - Check for hardcoded paths or platform-specific issues
 
 ### Mock not working
+
 - Ensure mock declarations come before imports
 - Check `jest.mock()` paths are correct
 - Verify `jest.clearAllMocks()` is called in `beforeEach`
 
 ### Timeout errors
+
 - Increase timeout in jest.config.js (`testTimeout`)
 - Check for infinite loops or unresolved promises
 
