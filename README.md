@@ -23,11 +23,11 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) version 24 with nvm or later installed or [Docker](https://www.docker.com/) with docker compose.
+1. [Bun](https://bun.com/) version 4.1.0 or later installed or [Docker](https://www.docker.com/) with docker compose.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
-3. Install dependencies **NodeJS Only**:
+3. Install dependencies **Bun Only**:
    ```
-   pnpm install
+   bun install
    ```
 
 ### Configuration
@@ -47,7 +47,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 Start the bot by running:
 
 ```
-pnpm start
+bun start
 ```
 
 or
@@ -61,13 +61,13 @@ The bot will log in and register the commands in all the servers it's added to.
 To run it in the background with tmux:
 
 ```
-pnpm bot:start
-pnpm bot:stop
-pnpm bot:status
-pnpm bot:attach
+bun bot:start
+bun bot:stop
+bun bot:status
+bun bot:attach
 ```
 
-`pnpm bot:stop` sends a clean shutdown signal so Discord sees the bot disconnect properly.
+`bun bot:stop` sends a clean shutdown signal so Discord sees the bot disconnect properly.
 
 ## Usage
 
@@ -100,11 +100,11 @@ pnpm bot:attach
 
 ### Prerequisites
 
-1. [Node.js](https://nodejs.org/) version 24 or later installed.
+1. [Bun](https://bun.com/) version 4.1.0 or later installed.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
 3. Install dependencies:
    ```
-   pnpm install
+   bun install
    ```
 
 ### Configuration
@@ -124,16 +124,16 @@ pnpm bot:attach
 Start the bot by running:
 
 ```
-pnpm start
+bun start
 ```
 
 Or use the tmux wrapper for background runs:
 
 ```
-pnpm bot:start
-pnpm bot:stop
-pnpm bot:status
-pnpm bot:attach
+bun bot:start
+bun bot:stop
+bun bot:status
+bun bot:attach
 ```
 
 ## Development Notes

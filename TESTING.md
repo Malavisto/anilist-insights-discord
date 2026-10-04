@@ -28,7 +28,7 @@ Unit tests focus on testing individual services and modules in isolation. They u
 **Run unit tests:**
 
 ```bash
-pnpm test:unit
+bun run test:unit
 ```
 
 ### 2. Integration Tests
@@ -48,7 +48,7 @@ Integration tests verify that multiple services work correctly together. They te
 **Run integration tests:**
 
 ```bash
-pnpm test:integration
+bun run test:integration
 ```
 
 ### 3. E2E Tests
@@ -69,7 +69,7 @@ End-to-end tests simulate complete command execution flows, verifying that all c
 **Run E2E tests:**
 
 ```bash
-pnpm test:e2e
+bun run test:e2e
 ```
 
 ## Running Tests Locally
@@ -77,19 +77,19 @@ pnpm test:e2e
 ### Run all tests
 
 ```bash
-pnpm test
+bun run test
 ```
 
 ### Run tests in watch mode (recommended for development)
 
 ```bash
-pnpm test:watch
+bun run test:watch
 ```
 
 ### Generate coverage reports
 
 ```bash
-pnpm test:coverage
+bun run test:coverage
 ```
 
 Coverage reports are saved to `coverage/` directory. Thresholds:
@@ -104,12 +104,12 @@ Coverage reports are saved to `coverage/` directory. Thresholds:
 ### Prerequisites
 
 - Node.js 24+ (matches the bot's runtime and the CI matrix)
-- pnpm 12.x (pinned via `packageManager` in `package.json`)
+- bun run 12.x (pinned via `packageManager` in `package.json`)
 
 ### Install dependencies
 
 ```bash
-pnpm install
+bun run install
 ```
 
 All testing dependencies are included in `devDependencies`:
@@ -151,19 +151,19 @@ Test data uses real AniList anime IDs for consistency:
 ### Run a single test file
 
 ```bash
-pnpm test -- CacheService.test.js
+bun run test -- CacheService.test.js
 ```
 
 ### Run a single test case
 
 ```bash
-pnpm test -- CacheService.test.js -t "should store and retrieve a value"
+bun run test -- CacheService.test.js -t "should store and retrieve a value"
 ```
 
 ### Enable verbose output
 
 ```bash
-pnpm test -- --verbose
+bun run test -- --verbose
 ```
 
 ### Debug in VS Code
@@ -283,7 +283,7 @@ Typical test execution times:
 ### Tests fail locally but pass in CI
 
 - Ensure Node version matches CI matrix (24.x)
-- Clear cache: `rm -rf node_modules pnpm-lock.yaml && pnpm install`
+- Clear cache: `rm -rf node_modules bun.lock && bun install`
 - Check for hardcoded paths or platform-specific issues
 
 ### Mock not working
