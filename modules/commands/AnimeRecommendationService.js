@@ -31,12 +31,12 @@ class AnimeRecommendationService {
 
   async fetchAnimeRecommendation(username) {
     try {
-      // Existing cache check
-      const cachedRecommendation = this.cache.get(`recommendation_${username}`);
-      if (cachedRecommendation) {
+      // Cache the candidate pool, selecting again for each command.
+      const cachedPool = this.cache.get(`recommendation_${username}`);
+      if (cachedPool) {
         metricsService.trackCacheHit('anime_recommendation');
 
-        return cachedRecommendation;
+        return this.selectRecommendation(cachedPool);
       }
 
       const query = `
@@ -118,10 +118,10 @@ class AnimeRecommendationService {
             `;
 
       const listedIds = new Set(allEntries.map((entry) => entry.media.id));
-      let uniqueRecommendations = [];
+      const uniqueRecommendations = new Map();
       let page = 1;
-      // Continue past already-listed candidates until a page provides new titles.
-      while (uniqueRecommendations.length === 0) {
+      // Collect up to five unseen titles, continuing when a page has too few.
+      while (uniqueRecommendations.size < 5) {
         const recommendationResponse = await anilistRequest(
           recommendationQuery,
           { genres: genresOfInterest, page },
@@ -129,37 +129,34 @@ class AnimeRecommendationService {
           username,
         );
         const result = recommendationResponse.data.data.Page;
-        uniqueRecommendations = result.media.filter((anime) => !listedIds.has(anime.id));
-        if (uniqueRecommendations.length > 0 || !result.pageInfo?.hasNextPage) break;
+        for (const anime of result.media) {
+          if (!listedIds.has(anime.id)) uniqueRecommendations.set(anime.id, anime);
+          if (uniqueRecommendations.size === 5) break;
+        }
+        if (uniqueRecommendations.size === 5 || !result.pageInfo?.hasNextPage) break;
         page++;
       }
 
-      if (uniqueRecommendations.length === 0) {
+      if (uniqueRecommendations.size === 0) {
         throw new Error('No unique recommendations found');
       }
 
-      // Select a random recommendation from the available range
-      const randomIndex = Math.floor(Math.random() * uniqueRecommendations.length);
-      const recommendedAnime = uniqueRecommendations[randomIndex];
-
-      const payload = {
-        id: recommendedAnime.id,
-        title: recommendedAnime.title.english || recommendedAnime.title.romaji,
-        description: recommendedAnime.description,
-        episodes: recommendedAnime.episodes || 'Unknown',
-        format: recommendedAnime.format,
-        status: recommendedAnime.status,
-        genres: recommendedAnime.genres,
-        year: recommendedAnime.seasonYear,
-        averageScore: recommendedAnime.averageScore,
-        coverImage: recommendedAnime.coverImage.extraLarge || recommendedAnime.coverImage.large,
-        matchedGenres: genresOfInterest.filter((genre) => recommendedAnime.genres.includes(genre)),
-      };
-
-      // Cache the result for future requests
-      this.cache.set(`recommendation_${username}`, payload);
-
-      return payload;
+      const candidates = [...uniqueRecommendations.values()].map((anime) => ({
+        id: anime.id,
+        title: anime.title.english || anime.title.romaji,
+        description: anime.description,
+        episodes: anime.episodes || 'Unknown',
+        format: anime.format,
+        status: anime.status,
+        genres: anime.genres,
+        year: anime.seasonYear,
+        averageScore: anime.averageScore,
+        coverImage: anime.coverImage.extraLarge || anime.coverImage.large,
+        matchedGenres: genresOfInterest.filter((genre) => anime.genres.includes(genre)),
+      }));
+      const pool = { candidates, lastId: null };
+      this.cache.set(`recommendation_${username}`, pool);
+      return this.selectRecommendation(pool);
     } catch (error) {
       metricsService.trackError('recommendation_failure', 'anime_recommend');
 
@@ -170,6 +167,17 @@ class AnimeRecommendationService {
       });
       throw error;
     }
+  }
+
+  selectRecommendation(pool) {
+    // Avoid consecutive repeats when there is more than one candidate.
+    const choices =
+      pool.candidates.length > 1
+        ? pool.candidates.filter((anime) => anime.id !== pool.lastId)
+        : pool.candidates;
+    const selected = choices[Math.floor(Math.random() * choices.length)];
+    pool.lastId = selected.id;
+    return selected;
   }
 
   createAnimeRecommendationEmbed(username, anime) {

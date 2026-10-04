@@ -39,7 +39,7 @@ One service per command (`RandomAnimeService`, `RandomMangaService`, `AnimeStats
 
 The two `Random*` services deliberately split their fetch into two GraphQL queries — one to grab the user's media ID list, then one to fetch the randomly chosen entry's details. Don't merge these into a single query.
 
-Each cache-enabled service constructor (all except `AnimeCoverService`) creates a **private** `CacheService`: in-memory TTL Map (5-min TTL, 60s background sweep, `unref()`'d timer), keyed like `recommendation_${username}` (the `Random*` services cache the fetched ID list first, e.g. `manga_ids_${username}`). Caching is per-process only — nothing persists across restarts.
+Each cache-enabled service constructor (all except `AnimeCoverService`) creates a **private** `CacheService`: in-memory TTL Map (5-min TTL, 60s background sweep, `unref()`'d timer), keyed like `recommendation_${username}` (the `Random*` services cache the fetched ID list first, e.g. `manga_ids_${username}`). Recommendations cache up to five unseen candidates and choose again per command, avoiding consecutive repeats when alternatives exist. Caching is per-process only — nothing persists across restarts.
 
 Shared helpers live in `modules/shared/`. `anilistRequest` owns HTTP timeout, headers, GraphQL error validation, and per-request metrics. Cache hits only increment cache metrics. Shared embed and last-resort reply helpers live in `embedHelpers.js` and `replyError.js`.
 

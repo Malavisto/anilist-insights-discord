@@ -82,6 +82,91 @@ describe('AnimeRecommendationService', () => {
       expect(mockAdapter.history.post).toHaveLength(3);
     });
 
+    test('collects alternatives across pages and avoids consecutive cached repeats', async () => {
+      const alternate = { ...candidate, id: 3, title: { english: 'Another anime' } };
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: [listed, candidate],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      });
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: [candidate, alternate],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      });
+      const random = jest.spyOn(Math, 'random').mockReturnValue(0);
+      try {
+        const results = [];
+        for (let i = 0; i < 5; i++) {
+          results.push((await service.fetchAnimeRecommendation('malavisto')).id);
+        }
+        expect(results).toEqual([2, 3, 2, 3, 2]);
+        expect(
+          service.cache.get('recommendation_malavisto').candidates.map((anime) => anime.id),
+        ).toEqual([2, 3]);
+        expect(mockAdapter.history.post).toHaveLength(4);
+        expect(require('../../modules/observability/metrics').trackCacheHit).toHaveBeenCalledTimes(
+          4,
+        );
+      } finally {
+        random.mockRestore();
+      }
+    });
+
+    test('stops collecting once five unique candidates are available', async () => {
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: Array.from({ length: 5 }, (_, index) => ({ ...candidate, id: index + 2 })),
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      });
+      await service.fetchAnimeRecommendation('testuser');
+      expect(service.cache.get('recommendation_testuser').candidates).toHaveLength(5);
+      expect(mockAdapter.history.post).toHaveLength(3);
+    });
+
+    test('refreshes the candidate pool after its TTL expires', async () => {
+      mockAdapter.onPost().replyOnce(200, {
+        data: {
+          Page: {
+            media: [candidate],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      });
+      await service.fetchAnimeRecommendation('testuser');
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + service.cache.ttl + 1);
+      try {
+        mockAdapter.onPost().replyOnce(200, {
+          data: {
+            MediaListCollection: {
+              lists: [{ entries: [{ score: 9, media: listed }] }],
+            },
+          },
+        });
+        mockAdapter.onPost().replyOnce(200, {
+          data: {
+            Page: {
+              media: [{ ...candidate, id: 4 }],
+              pageInfo: { hasNextPage: false },
+            },
+          },
+        });
+        expect((await service.fetchAnimeRecommendation('testuser')).id).toBe(4);
+        expect(mockAdapter.history.post).toHaveLength(5);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
     test('stops when the final page has no unseen titles', async () => {
       mockAdapter.onPost().replyOnce(200, {
         data: {
