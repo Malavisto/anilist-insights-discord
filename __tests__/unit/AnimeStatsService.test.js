@@ -165,7 +165,9 @@ describe('AnimeStatsService', () => {
       // Second call should use cache
       const secondResult = await service.fetchUserAnimeStats(username);
 
-      expect(secondResult).toEqual(firstResult);
+      expect(secondResult).toEqual({ ...firstResult, source: 'cache' });
+      expect(firstResult.source).toBe('anilist');
+      expect(service.cache.get(`stats_${username}`)).not.toHaveProperty('source');
       const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
@@ -291,6 +293,31 @@ describe('AnimeStatsService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(1);
       const embed = interaction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.title).toBe('📊 Anime Stats for testuser');
+    });
+
+    test('shows the source for fresh, cached, and expired-cache command replies', async () => {
+      mockAdapter.onPost('https://graphql.anilist.co').reply(200, mockStatsResponse);
+      const fresh = createMockInteraction({ commandName: 'animestats' });
+      const cached = createMockInteraction({ commandName: 'animestats' });
+      const refreshed = createMockInteraction({ commandName: 'animestats' });
+      const footer = (interaction) =>
+        interaction.editReply.mock.calls[0][0].embeds[0].data.footer.text;
+
+      await service.handleAnimeStatsCommand(fresh);
+      await service.handleAnimeStatsCommand(cached);
+      expect(footer(fresh)).toBe('Stats fetched from AniList');
+      expect(footer(cached)).toBe('Stats served from cache');
+      expect(mockAdapter.history.post).toHaveLength(1);
+
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + service.cache.ttl + 1);
+      try {
+        await service.handleAnimeStatsCommand(refreshed);
+        expect(footer(refreshed)).toBe('Stats fetched from AniList');
+        expect(mockAdapter.history.post).toHaveLength(2);
+        expect(footer(fresh)).toBe('Stats fetched from AniList');
+      } finally {
+        clock.mockRestore();
+      }
     });
 
     test('should ask for a username when the option is missing', async () => {

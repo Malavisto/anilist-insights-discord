@@ -35,7 +35,7 @@ class AnimeStatsService {
       if (cachedStats) {
         metricsService.trackCacheHit('anime_stats');
 
-        return cachedStats;
+        return { ...cachedStats, source: 'cache' };
       }
       const query = `
             query ($username: String) {
@@ -95,7 +95,8 @@ class AnimeStatsService {
       }
 
       // Cache the result
-      return this.cache.set(`stats_${username}`, stats);
+      this.cache.set(`stats_${username}`, stats);
+      return { ...stats, source: 'anilist' };
     } catch (error) {
       metricsService.trackError('fetch_failure', 'anime_stats');
 
@@ -150,7 +151,7 @@ class AnimeStatsService {
         },
       )
       .setFooter({
-        text: 'Stats fetched from AniList',
+        text: stats.source === 'cache' ? 'Stats served from Cache' : 'Stats fetched from AniList',
       });
 
     return embed;
