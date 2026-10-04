@@ -32,6 +32,29 @@ describe('RandomAnimeService', () => {
     mockAdapter.reset();
   });
 
+  test('deduplicates custom-list IDs before caching and random selection', async () => {
+    mockAdapter.onPost().replyOnce(200, {
+      data: {
+        User: { id: 1 },
+        MediaListCollection: {
+          lists: [
+            { entries: [{ media: { id: 1 } }, { media: { id: 2 } }] },
+            { entries: [{ media: { id: 1 } }] },
+          ],
+        },
+      },
+    });
+    mockAdapter.onPost().replyOnce(200, { data: { MediaList: null } });
+    const random = jest.spyOn(Math, 'random').mockReturnValue(0.75);
+    try {
+      await expect(service.fetchRandomAnime('testuser')).rejects.toThrow('No');
+      expect(service.cache.get('anime_ids_testuser')).toEqual([1, 2]);
+      expect(JSON.parse(mockAdapter.history.post[1].data).variables.id).toBe(2);
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   describe('fetchRandomAnime', () => {
     test('should return a random anime from user list', async () => {
       const username = 'testuser';

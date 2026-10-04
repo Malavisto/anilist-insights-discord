@@ -94,9 +94,13 @@ class RandomAnimeService {
           throw new Error(`User ${username} not found on AniList`);
         }
 
-        allIDs = response_ids.data.data.MediaListCollection.lists.flatMap((list) =>
-          list.entries.map((entry) => entry.media.id),
-        );
+        allIDs = [
+          ...new Set(
+            response_ids.data.data.MediaListCollection.lists.flatMap((list) =>
+              list.entries.map((entry) => entry.media.id),
+            ),
+          ),
+        ];
 
         // Cache the IDs for future requests
         this.cache.set(cacheKey, allIDs);
