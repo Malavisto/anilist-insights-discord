@@ -1,14 +1,14 @@
 const crypto = require('crypto');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
 // @prometheus-io/client's global registry is per test file (jest isolates module
-// registries), so other files' jest.mock('../../metrics') are unaffected.
+// registries), so other files' jest.mock('../../modules/observability/metrics') are unaffected.
 const client = require('@prometheus-io/client');
 
 // Must run BEFORE requiring metrics.js: @prometheus-io/client 15's
@@ -16,20 +16,20 @@ const client = require('@prometheus-io/client');
 // cannot stop, which would leave the worker with open handles. No-op it.
 jest.spyOn(client, 'collectDefaultMetrics').mockImplementation(() => {});
 
-const metricsService = require('../../metrics');
+const metricsService = require('../../modules/observability/metrics');
 
 const sha256Prefix = (value) =>
   crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
 
 const getValues = async (metricName) => {
   const json = await client.register.getMetricsAsJSON();
-  const metric = json.find(m => m.name === metricName);
+  const metric = json.find((m) => m.name === metricName);
   return metric ? metric.values : [];
 };
 
 const findValue = (values, labelMatch) =>
-  values.find(v =>
-    Object.entries(labelMatch).every(([key, expected]) => v.labels[key] === expected)
+  values.find((v) =>
+    Object.entries(labelMatch).every(([key, expected]) => v.labels[key] === expected),
   );
 
 describe('MetricsService', () => {
@@ -56,7 +56,9 @@ describe('MetricsService', () => {
       end('failure');
 
       const values = await getValues('anilist_bot_command_duration_seconds');
-      const count = values.find(v => v.metricName === 'anilist_bot_command_duration_seconds_count');
+      const count = values.find(
+        (v) => v.metricName === 'anilist_bot_command_duration_seconds_count',
+      );
 
       expect(count.labels).toEqual({ command_type: 'anime_stats', status: 'failure' });
       expect(count.value).toBe(1);
@@ -67,7 +69,9 @@ describe('MetricsService', () => {
       end();
 
       const values = await getValues('anilist_bot_command_duration_seconds');
-      const count = values.find(v => v.metricName === 'anilist_bot_command_duration_seconds_count');
+      const count = values.find(
+        (v) => v.metricName === 'anilist_bot_command_duration_seconds_count',
+      );
 
       expect(count.labels).toEqual({ command_type: 'anime_stats', status: 'success' });
       expect(count.value).toBe(1);
@@ -94,7 +98,7 @@ describe('MetricsService', () => {
       const entry = findValue(values, {
         endpoint: 'anime_random',
         status: 'started',
-        username: sha256Prefix('testuser')
+        username: sha256Prefix('testuser'),
       });
 
       expect(entry).toBeDefined();
@@ -105,7 +109,7 @@ describe('MetricsService', () => {
       metricsService.trackApiRequest('anime_random', 'started', 'testuser');
 
       const values = await getValues('anilist_api_requests_total');
-      const rawHits = values.filter(v => Object.values(v.labels).includes('testuser'));
+      const rawHits = values.filter((v) => Object.values(v.labels).includes('testuser'));
       expect(rawHits).toHaveLength(0);
 
       const exposition = await metricsService.getMetrics();
@@ -120,7 +124,7 @@ describe('MetricsService', () => {
       const entry = findValue(values, {
         endpoint: 'anime_random',
         status: 'failure',
-        username: 'unknown'
+        username: 'unknown',
       });
 
       expect(entry).toBeDefined();
@@ -132,7 +136,7 @@ describe('MetricsService', () => {
       });
 
       expect(() =>
-        metricsService.trackApiRequest('anime_random', 'started', 'testuser')
+        metricsService.trackApiRequest('anime_random', 'started', 'testuser'),
       ).not.toThrow();
     });
   });
@@ -144,7 +148,7 @@ describe('MetricsService', () => {
       const values = await getValues('anilist_user_stats');
       const entry = findValue(values, {
         metric_type: 'total_anime',
-        username: sha256Prefix('testuser')
+        username: sha256Prefix('testuser'),
       });
 
       expect(entry).toBeDefined();
@@ -157,7 +161,7 @@ describe('MetricsService', () => {
       const values = await getValues('anilist_user_stats');
       const entry = findValue(values, {
         metric_type: 'total_anime',
-        username: 'unknown'
+        username: 'unknown',
       });
 
       expect(entry).toBeDefined();
@@ -182,7 +186,7 @@ describe('MetricsService', () => {
       const values = await getValues('anilist_bot_errors_total');
       const entry = findValue(values, {
         error_type: 'fetch_failure',
-        command_type: 'anime_stats'
+        command_type: 'anime_stats',
       });
 
       expect(entry).toBeDefined();

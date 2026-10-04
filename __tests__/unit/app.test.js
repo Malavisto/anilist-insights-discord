@@ -4,22 +4,22 @@ process.env.METRICS_PORT = '9911';
 
 const { AniListDiscordBot } = require('../../app');
 const { Client, GatewayIntentBits } = require('discord.js');
-const logger = require('../../logger');
+const logger = require('../../modules/observability/logger');
 const { createMockInteraction } = require('../helpers/mockInteraction');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackCommand: jest.fn(() => jest.fn()),
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
-  getMetrics: jest.fn()
+  getMetrics: jest.fn(),
 }));
 
 // Service instances the bot should hold
@@ -31,44 +31,46 @@ const mockCover = { handleAnimeCoverCommand: jest.fn() };
 
 // Real command definitions (real SlashCommandBuilders) keep this test honest
 // about the register/dispatch sync invariant; only the constructor is faked.
-const mockRealRandom = jest.requireActual('../../modules/RandomAnimeService');
-const mockRealManga = jest.requireActual('../../modules/RandomMangaService');
-const mockRealStats = jest.requireActual('../../modules/AnimeStatsService');
-const mockRealRecommendation = jest.requireActual('../../modules/animeRecommendation');
-const mockRealCover = jest.requireActual('../../modules/AnimeCoverService');
+const mockRealRandom = jest.requireActual('../../modules/commands/RandomAnimeService');
+const mockRealManga = jest.requireActual('../../modules/commands/RandomMangaService');
+const mockRealStats = jest.requireActual('../../modules/commands/AnimeStatsService');
+const mockRealRecommendation = jest.requireActual(
+  '../../modules/commands/AnimeRecommendationService',
+);
+const mockRealCover = jest.requireActual('../../modules/commands/AnimeCoverService');
 
-jest.mock('../../modules/RandomAnimeService', () => {
+jest.mock('../../modules/commands/RandomAnimeService', () => {
   const MockRandomAnimeService = jest.fn(() => mockRandom);
   Object.defineProperty(MockRandomAnimeService, 'commandDefinition', {
-    get: () => mockRealRandom.commandDefinition
+    get: () => mockRealRandom.commandDefinition,
   });
   return MockRandomAnimeService;
 });
-jest.mock('../../modules/RandomMangaService', () => {
+jest.mock('../../modules/commands/RandomMangaService', () => {
   const MockRandomMangaService = jest.fn(() => mockManga);
   Object.defineProperty(MockRandomMangaService, 'commandDefinition', {
-    get: () => mockRealManga.commandDefinition
+    get: () => mockRealManga.commandDefinition,
   });
   return MockRandomMangaService;
 });
-jest.mock('../../modules/AnimeStatsService', () => {
+jest.mock('../../modules/commands/AnimeStatsService', () => {
   const MockAnimeStatsService = jest.fn(() => mockStats);
   Object.defineProperty(MockAnimeStatsService, 'commandDefinition', {
-    get: () => mockRealStats.commandDefinition
+    get: () => mockRealStats.commandDefinition,
   });
   return MockAnimeStatsService;
 });
-jest.mock('../../modules/animeRecommendation', () => {
+jest.mock('../../modules/commands/AnimeRecommendationService', () => {
   const MockAnimeRecommendationService = jest.fn(() => mockRecommendation);
   Object.defineProperty(MockAnimeRecommendationService, 'commandDefinition', {
-    get: () => mockRealRecommendation.commandDefinition
+    get: () => mockRealRecommendation.commandDefinition,
   });
   return MockAnimeRecommendationService;
 });
-jest.mock('../../modules/AnimeCoverService', () => {
+jest.mock('../../modules/commands/AnimeCoverService', () => {
   const MockAnimeCoverService = jest.fn(() => mockCover);
   Object.defineProperty(MockAnimeCoverService, 'commandDefinition', {
-    get: () => mockRealCover.commandDefinition
+    get: () => mockRealCover.commandDefinition,
   });
   return MockAnimeCoverService;
 });
@@ -76,7 +78,7 @@ jest.mock('../../modules/AnimeCoverService', () => {
 // Keep real SlashCommandBuilder/EmbedBuilder; only Client is faked
 jest.mock('discord.js', () => ({
   ...jest.requireActual('discord.js'),
-  Client: jest.fn()
+  Client: jest.fn(),
 }));
 
 const mockApp = { get: jest.fn(), listen: jest.fn() };
@@ -104,7 +106,7 @@ describe('AniListDiscordBot', () => {
       destroy: jest.fn().mockResolvedValue(undefined),
       login: jest.fn().mockResolvedValue('token'),
       user: { tag: 'TestBot#0001' },
-      guilds: { cache: new Map() }
+      guilds: { cache: new Map() },
     };
     Client.mockImplementation(() => mockClient);
 
@@ -126,16 +128,16 @@ describe('AniListDiscordBot', () => {
   describe('constructor', () => {
     test('creates a Discord client with the required intents', () => {
       expect(Client).toHaveBeenCalledWith({
-        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
       });
     });
 
     test('instantiates the five services', () => {
-      const RandomAnimeService = require('../../modules/RandomAnimeService');
-      const RandomMangaService = require('../../modules/RandomMangaService');
-      const AnimeStatsService = require('../../modules/AnimeStatsService');
-      const AnimeRecommendationService = require('../../modules/animeRecommendation');
-      const AnimeCoverService = require('../../modules/AnimeCoverService');
+      const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
+      const RandomMangaService = require('../../modules/commands/RandomMangaService');
+      const AnimeStatsService = require('../../modules/commands/AnimeStatsService');
+      const AnimeRecommendationService = require('../../modules/commands/AnimeRecommendationService');
+      const AnimeCoverService = require('../../modules/commands/AnimeCoverService');
 
       expect(RandomAnimeService).toHaveBeenCalledTimes(1);
       expect(RandomMangaService).toHaveBeenCalledTimes(1);
@@ -154,8 +156,6 @@ describe('AniListDiscordBot', () => {
       expect(mockApp.listen).toHaveBeenCalledWith('9911', expect.any(Function));
       expect(bot.httpServer).toBe(mockServer);
       expect(bot.isShuttingDown).toBe(false);
-      expect(bot.accessToken).toBeNull();
-      expect(bot.tokenExpiresAt).toBe(0);
     });
 
     test('logs in to Discord during setup', () => {
@@ -177,8 +177,12 @@ describe('AniListDiscordBot', () => {
 
       expect(guild.commands.set).toHaveBeenCalledTimes(1);
       const commands = guild.commands.set.mock.calls[0][0];
-      expect(commands.map(command => command.name)).toEqual([
-        'animerandom', 'mangarandom', 'animestats', 'animerecommend', 'animecover'
+      expect(commands.map((command) => command.name)).toEqual([
+        'animerandom',
+        'mangarandom',
+        'animestats',
+        'animerecommend',
+        'animecover',
       ]);
     });
 
@@ -188,14 +192,14 @@ describe('AniListDiscordBot', () => {
       await bot.registerSlashCommands(guild);
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('5 slash commands for guild g1')
+        expect.stringContaining('5 slash commands for guild g1'),
       );
     });
 
     test('propagates registration failures to the caller', async () => {
       const guild = {
         id: 'g1',
-        commands: { set: jest.fn().mockRejectedValue(new Error('discord down')) }
+        commands: { set: jest.fn().mockRejectedValue(new Error('discord down')) },
       };
 
       await expect(bot.registerSlashCommands(guild)).rejects.toThrow('discord down');
@@ -212,7 +216,7 @@ describe('AniListDiscordBot', () => {
         ['mangarandom', mockManga, 'handleRandomMangaCommand'],
         ['animestats', mockStats, 'handleAnimeStatsCommand'],
         ['animerecommend', mockRecommendation, 'handleAnimeRecommendCommand'],
-        ['animecover', mockCover, 'handleAnimeCoverCommand']
+        ['animecover', mockCover, 'handleAnimeCoverCommand'],
       ];
 
       for (const [name, service, method] of commands) {
@@ -226,7 +230,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('tracks the command with its metric name and guild id', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       const interaction = createMockInteraction({ commandName: 'mangarandom' });
 
@@ -236,7 +240,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ends the command timer with success when the handler resolves', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
 
       await handler(createMockInteraction());
@@ -245,8 +249,27 @@ describe('AniListDiscordBot', () => {
       expect(endTimer).toHaveBeenCalledWith('success');
     });
 
+    test('records a handled fetch failure from a real service as failure', async () => {
+      const service = new mockRealRandom();
+      jest.spyOn(service, 'fetchRandomAnime').mockRejectedValue(new Error('AniList unavailable'));
+      const originalHandler = bot.commandHandlers.get('animerandom');
+      bot.commandHandlers.set('animerandom', { ...originalHandler, service });
+      const interaction = createMockInteraction();
+      try {
+        await onInteractionCreate()(interaction);
+        expect(interaction.editReply).toHaveBeenCalledWith({
+          content: expect.stringContaining('Error fetching anime'),
+        });
+        expect(
+          require('../../modules/observability/metrics').trackCommand.mock.results[0].value,
+        ).toHaveBeenCalledWith('failure');
+      } finally {
+        service.cache.destroy();
+      }
+    });
+
     test('ends the timer with failure and logs when the handler throws', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       mockRandom.handleRandomAnimeCommand.mockRejectedValueOnce(new Error('boom'));
 
@@ -256,12 +279,12 @@ describe('AniListDiscordBot', () => {
       expect(endTimer).toHaveBeenCalledWith('failure');
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('Unhandled error from /animerandom'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
     test('tolerates trackCommand returning undefined', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       metrics.trackCommand.mockReturnValueOnce(undefined);
 
@@ -270,7 +293,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ignores non-chat-input interactions', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       const interaction = createMockInteraction({ isChatInputCommand: jest.fn(() => false) });
 
@@ -281,7 +304,7 @@ describe('AniListDiscordBot', () => {
     });
 
     test('ignores unknown command names', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const handler = onInteractionCreate();
       const interaction = createMockInteraction({ commandName: 'unknowncmd' });
 
@@ -296,7 +319,10 @@ describe('AniListDiscordBot', () => {
     test('logs the bot tag and registers commands for every guild', async () => {
       const g1 = { id: 'g1', commands: { set: jest.fn().mockResolvedValue(undefined) } };
       const g2 = { id: 'g2', commands: { set: jest.fn().mockResolvedValue(undefined) } };
-      mockClient.guilds.cache = new Map([['g1', g1], ['g2', g2]]);
+      mockClient.guilds.cache = new Map([
+        ['g1', g1],
+        ['g2', g2],
+      ]);
 
       const ready = handlerFor(mockClient.once, 'ready');
       await ready();
@@ -309,16 +335,16 @@ describe('AniListDiscordBot', () => {
     test('continues to later guilds when one guild fails', async () => {
       const g1 = { id: 'g1', commands: { set: jest.fn().mockRejectedValue(new Error('boom')) } };
       const g2 = { id: 'g2', commands: { set: jest.fn().mockResolvedValue(undefined) } };
-      mockClient.guilds.cache = new Map([['g1', g1], ['g2', g2]]);
+      mockClient.guilds.cache = new Map([
+        ['g1', g1],
+        ['g2', g2],
+      ]);
 
       const ready = handlerFor(mockClient.once, 'ready');
       await ready();
 
       expect(g2.commands.set).toHaveBeenCalled();
-      expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('g1'),
-        expect.any(Object)
-      );
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('g1'), expect.any(Object));
     });
   });
 
@@ -330,7 +356,7 @@ describe('AniListDiscordBot', () => {
     };
 
     test('serves metrics with the prometheus content type', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       metrics.getMetrics.mockResolvedValue('# HELP anilist_bot_commands_total 2');
       const res = { set: jest.fn(), send: jest.fn(), status: jest.fn(() => res) };
 
@@ -338,13 +364,13 @@ describe('AniListDiscordBot', () => {
 
       expect(res.set).toHaveBeenCalledWith(
         'Content-Type',
-        require('@prometheus-io/client').register.contentType
+        require('@prometheus-io/client').register.contentType,
       );
       expect(res.send).toHaveBeenCalledWith('# HELP anilist_bot_commands_total 2');
     });
 
     test('returns 500 when metric collection fails', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       metrics.getMetrics.mockRejectedValue(new Error('collect failed'));
       const res = { set: jest.fn(), send: jest.fn(), status: jest.fn(() => res) };
 

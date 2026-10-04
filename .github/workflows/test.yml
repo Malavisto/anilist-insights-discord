@@ -2,9 +2,9 @@ name: Test Suite
 
 on:
   push:
-    branches: [ dev, renovate/** ]
+    branches: [dev, renovate/**]
   pull_request:
-    branches: [ main, dev ]
+    branches: [main, dev]
 
 # These jobs only read the repo and run tests — no token writes needed.
 permissions:
@@ -13,98 +13,84 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        node-version: [24.x]
-    
-    steps:
-    - uses: actions/checkout@v7
-    
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v7
-      with:
-        node-version: ${{ matrix.node-version }}
-    
-    - name: Install pnpm
-      uses: pnpm/action-setup@v6
-    
-    - name: Get pnpm store directory
-      id: pnpm-cache
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-    
-    - name: Setup pnpm cache
-      uses: actions/cache@v6
-      with:
-        path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
-    
-    - name: Install dependencies
-      run: pnpm install
-    
-    - name: Run unit tests
-      run: pnpm test:unit
-    
-    - name: Run integration tests
-      run: pnpm test:integration
-    
-    - name: Run E2E tests
-      run: pnpm test:e2e
+        bun-version: [1.4.x]
 
-    - name: Run tests with coverage (enforces jest.config.js thresholds)
-      run: pnpm test:coverage
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install bun ${{ matrix.bun-version }}
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun-version }}
+
+      - name: Setup bun cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run unit tests
+        run: bun run test:unit
+
+      - name: Run integration tests
+        run: bun run test:integration
+
+      - name: Run E2E tests
+        run: bun run test:e2e
+
+      - name: Run tests with coverage (enforces jest.config.js thresholds)
+        run: bun run test:coverage
 
   lint:
     runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v7
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v7
-      with:
-        node-version: 24.x
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v6
-    
-    - name: Get pnpm store directory
-      id: pnpm-cache
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-    
-    - name: Setup pnpm cache
-      uses: actions/cache@v6
-      with:
-        path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
-    
-    - name: Install dependencies
-      run: pnpm install
-    
-    - name: Check for syntax errors
-      run: |
-        # Check if any JavaScript files have syntax errors
-        pnpm exec eslint . --ext .js --max-warnings 0 || true
-        echo "Syntax check complete"
+    strategy:
+      matrix:
+        bun-version: [1.4.x]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install bun ${{ matrix.bun-version }}
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun-version }}
+
+      - name: Setup bun cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Lint (blocking — fails the build)
+        run: bun run lint
+
+      - name: Check formatting
+        run: bun run format:check
 
   test-results:
     needs: [test, lint]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
-    - name: Check test results
-      run: |
-        if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.lint.result }}" != "success" ]; then
-          echo "❌ CI pipeline failed"
-          exit 1
-        fi
-        echo "✅ All checks passed!"
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "❌ CI pipeline failed"
+            exit 1
+          fi
+          echo "✅ All checks passed!"

@@ -1,22 +1,22 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const CacheService = require('../../modules/CacheService');
-const RandomAnimeService = require('../../modules/RandomAnimeService');
-const RandomMangaService = require('../../modules/RandomMangaService');
-const AnimeStatsService = require('../../modules/AnimeStatsService');
+const CacheService = require('../../modules/shared/CacheService');
+const RandomAnimeService = require('../../modules/commands/RandomAnimeService');
+const RandomMangaService = require('../../modules/commands/RandomMangaService');
+const AnimeStatsService = require('../../modules/commands/AnimeStatsService');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
-  trackCommand: jest.fn(() => jest.fn())
+  trackCommand: jest.fn(() => jest.fn()),
 }));
 
 describe('Integration Tests - Service Interactions', () => {
@@ -44,11 +44,11 @@ describe('Integration Tests - Service Interactions', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: animeIds.map(id => ({ media: { id } }))
-              }
-            ]
-          }
-        }
+                entries: animeIds.map((id) => ({ media: { id } })),
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -64,12 +64,12 @@ describe('Integration Tests - Service Interactions', () => {
               description: '',
               averageScore: 80,
               seasonYear: 2024,
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       const result1 = await service.fetchRandomAnime(username);
@@ -89,18 +89,18 @@ describe('Integration Tests - Service Interactions', () => {
               description: '',
               averageScore: 85,
               seasonYear: 2024,
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 8
-          }
-        }
+            score: 8,
+          },
+        },
       });
 
       const result2 = await service.fetchRandomAnime(username);
       expect(result2).toBeDefined();
 
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -108,8 +108,6 @@ describe('Integration Tests - Service Interactions', () => {
       const ttl = 500; // Short TTL for testing
       const service = new RandomAnimeService();
       service.cache = new CacheService(ttl, 'TestCache');
-
-      const username = 'testuser';
 
       // Set manual cache entry
       service.cache.set('anime_ids_testuser', [1, 2, 3]);
@@ -142,11 +140,11 @@ describe('Integration Tests - Service Interactions', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: mangaIds.map(id => ({ media: { id } }))
-              }
-            ]
-          }
-        }
+                entries: mangaIds.map((id) => ({ media: { id } })),
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -163,12 +161,12 @@ describe('Integration Tests - Service Interactions', () => {
               description: '',
               averageScore: 80,
               startDate: { year: 2024 },
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       const result1 = await service.fetchRandomManga(username);
@@ -189,18 +187,18 @@ describe('Integration Tests - Service Interactions', () => {
               description: '',
               averageScore: 85,
               startDate: { year: 2024 },
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 8
-          }
-        }
+            score: 8,
+          },
+        },
       });
 
       const result2 = await service.fetchRandomManga(username);
       expect(result2).toBeDefined();
 
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalledWith('manga_random');
       // Two fetches = one IDs request + two detail requests, thanks to the cache
       expect(mockAdapter.history.post.length).toBe(3);
@@ -210,8 +208,6 @@ describe('Integration Tests - Service Interactions', () => {
       const ttl = 500; // Short TTL for testing
       const service = new RandomMangaService();
       service.cache = new CacheService(ttl, 'TestCache');
-
-      const username = 'testuser';
 
       // Set manual cache entry
       service.cache.set('manga_ids_testuser', [1, 2, 3]);
@@ -241,23 +237,23 @@ describe('Integration Tests - Service Interactions', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: [{ media: { id: 1 } }, { media: { id: 5 } }]
-              }
-            ]
-          }
-        }
+                entries: [{ media: { id: 1 } }, { media: { id: 5 } }],
+              },
+            ],
+          },
+        },
       });
 
       // Second call to fetch manga details fails
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: [{ message: 'Server error' }]
+        errors: [{ message: 'Server error' }],
       });
 
       await expect(service.fetchRandomManga(username)).rejects.toThrow();
     });
 
     test('should maintain cache consistency during errors', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const service = new RandomMangaService();
       const username = 'testuser';
 
@@ -266,9 +262,9 @@ describe('Integration Tests - Service Interactions', () => {
         data: {
           User: { id: 1 },
           MediaListCollection: {
-            lists: [{ entries: [{ media: { id: 42 } }] }]
-          }
-        }
+            lists: [{ entries: [{ media: { id: 42 } }] }],
+          },
+        },
       });
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -286,13 +282,13 @@ describe('Integration Tests - Service Interactions', () => {
               startDate: { year: 2024 },
               coverImage: {
                 large: 'https://example.com/cover.jpg',
-                extraLarge: 'https://example.com/cover_large.jpg'
-              }
+                extraLarge: 'https://example.com/cover_large.jpg',
+              },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       const result = await service.fetchRandomManga(username);
@@ -300,7 +296,7 @@ describe('Integration Tests - Service Interactions', () => {
 
       // Everything fails from now on
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: [{ message: 'Server error' }]
+        errors: [{ message: 'Server error' }],
       });
 
       // Second call serves the cached IDs, then fails on the detail fetch
@@ -327,35 +323,31 @@ describe('Integration Tests - Service Interactions', () => {
                 entries: [
                   { status: 'COMPLETED', score: 85, media: { averageScore: 85 } },
                   { status: 'COMPLETED', score: 90, media: { averageScore: 90 } },
-                  { status: 'COMPLETED', score: 75, media: { averageScore: 75 } }
-                ]
+                  { status: 'COMPLETED', score: 75, media: { averageScore: 75 } },
+                ],
               },
               {
                 name: 'Watching',
-                entries: [
-                  { status: 'CURRENT', score: 80, media: { averageScore: 80 } }
-                ]
+                entries: [{ status: 'CURRENT', score: 80, media: { averageScore: 80 } }],
               },
               {
                 name: 'Paused',
-                entries: []
+                entries: [],
               },
               {
                 name: 'Dropped',
-                entries: [
-                  { status: 'DROPPED', score: 50, media: { averageScore: 50 } }
-                ]
+                entries: [{ status: 'DROPPED', score: 50, media: { averageScore: 50 } }],
               },
               {
                 name: 'Planning',
                 entries: [
                   { status: 'PLANNING', score: 0, media: { averageScore: null } },
-                  { status: 'PLANNING', score: 70, media: { averageScore: 70 } }
-                ]
-              }
-            ]
-          }
-        }
+                  { status: 'PLANNING', score: 70, media: { averageScore: 70 } },
+                ],
+              },
+            ],
+          },
+        },
       });
 
       const stats = await service.fetchUserAnimeStats(username);
@@ -368,7 +360,7 @@ describe('Integration Tests - Service Interactions', () => {
       expect(stats.pausedAnime).toBe(0);
       expect(stats.droppedAnime).toBe(1);
       expect(stats.planningAnime).toBe(2);
-      
+
       // Average: (85+90+75+80+50+70) / 6 = 75
       expect(parseFloat(stats.averageScore)).toBe(75);
     });
@@ -382,14 +374,23 @@ describe('Integration Tests - Service Interactions', () => {
           User: { id: 1, name: 'testuser' },
           MediaListCollection: {
             lists: [
-              { name: 'Completed', entries: Array(10).fill({ status: 'COMPLETED', media: { averageScore: 80 } }) },
-              { name: 'Watching', entries: Array(3).fill({ status: 'CURRENT', media: { averageScore: 78 } }) },
+              {
+                name: 'Completed',
+                entries: Array(10).fill({ status: 'COMPLETED', media: { averageScore: 80 } }),
+              },
+              {
+                name: 'Watching',
+                entries: Array(3).fill({ status: 'CURRENT', media: { averageScore: 78 } }),
+              },
               { name: 'Paused', entries: [] },
               { name: 'Dropped', entries: [] },
-              { name: 'Planning', entries: Array(5).fill({ status: 'PLANNING', media: { averageScore: 75 } }) }
-            ]
-          }
-        }
+              {
+                name: 'Planning',
+                entries: Array(5).fill({ status: 'PLANNING', media: { averageScore: 75 } }),
+              },
+            ],
+          },
+        },
       });
 
       const stats = await service.fetchUserAnimeStats(username);
@@ -414,23 +415,23 @@ describe('Integration Tests - Service Interactions', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: [{ media: { id: 1 } }, { media: { id: 5 } }]
-              }
-            ]
-          }
-        }
+                entries: [{ media: { id: 1 } }, { media: { id: 5 } }],
+              },
+            ],
+          },
+        },
       });
 
       // Second call to fetch anime details fails
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: [{ message: 'Server error' }]
+        errors: [{ message: 'Server error' }],
       });
 
       await expect(service.fetchRandomAnime(username)).rejects.toThrow();
     });
 
     test('should maintain cache consistency during errors', async () => {
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       const service = new RandomAnimeService();
       const username = 'testuser';
 
@@ -439,9 +440,9 @@ describe('Integration Tests - Service Interactions', () => {
         data: {
           User: { id: 1 },
           MediaListCollection: {
-            lists: [{ entries: [{ media: { id: 42 } }] }]
-          }
-        }
+            lists: [{ entries: [{ media: { id: 42 } }] }],
+          },
+        },
       });
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -458,13 +459,13 @@ describe('Integration Tests - Service Interactions', () => {
               seasonYear: 2024,
               coverImage: {
                 large: 'https://example.com/cover.jpg',
-                extraLarge: 'https://example.com/cover_large.jpg'
-              }
+                extraLarge: 'https://example.com/cover_large.jpg',
+              },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       const result = await service.fetchRandomAnime(username);
@@ -472,7 +473,7 @@ describe('Integration Tests - Service Interactions', () => {
 
       // Everything fails from now on
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
-        errors: [{ message: 'Server error' }]
+        errors: [{ message: 'Server error' }],
       });
 
       // Second call serves the cached IDs, then fails on the detail fetch
@@ -487,38 +488,38 @@ describe('Integration Tests - Service Interactions', () => {
   describe('Concurrent service calls', () => {
     test('should handle multiple concurrent requests', async () => {
       const statsService = new AnimeStatsService();
-      const randomService = new RandomAnimeService();
 
       const users = ['user1', 'user2', 'user3'];
 
       // Mock requests for each user
-      users.forEach(username => {
+      users.forEach((username) => {
         // Stats call
         mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
           data: {
             User: { id: 1, name: username },
             MediaListCollection: {
               lists: [
-                { name: 'Completed', entries: [{ status: 'COMPLETED', media: { averageScore: 85 } }] },
+                {
+                  name: 'Completed',
+                  entries: [{ status: 'COMPLETED', media: { averageScore: 85 } }],
+                },
                 { name: 'Watching', entries: [] },
                 { name: 'Paused', entries: [] },
                 { name: 'Dropped', entries: [] },
-                { name: 'Planning', entries: [] }
-              ]
-            }
-          }
+                { name: 'Planning', entries: [] },
+              ],
+            },
+          },
         });
       });
 
       // Call stats for all users concurrently
-      const requests = users.map(username =>
-        statsService.fetchUserAnimeStats(username)
-      );
+      const requests = users.map((username) => statsService.fetchUserAnimeStats(username));
 
       const results = await Promise.all(requests);
 
       expect(results).toHaveLength(3);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.totalAnime).toBe(1);
         expect(result.completedAnime).toBe(1);
       });
@@ -539,7 +540,7 @@ describe('Integration Tests - Service Interactions', () => {
 
       // Verify timer is stopped (sweepTimer should be null after destroy)
       expect(service.cache.sweepTimer).toBeNull();
-      
+
       // Data persists after destroy
       expect(service.cache.getStats().totalKeys).toBe(2);
 

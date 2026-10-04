@@ -1,4 +1,4 @@
-const CacheService = require('../../modules/CacheService');
+const CacheService = require('../../modules/shared/CacheService');
 
 describe('CacheService', () => {
   let cache;
@@ -36,7 +36,7 @@ describe('CacheService', () => {
     test('should overwrite existing keys', () => {
       cache.set('key1', 'value1');
       expect(cache.get('key1')).toBe('value1');
-      
+
       cache.set('key1', 'newvalue1');
       expect(cache.get('key1')).toBe('newvalue1');
     });
@@ -60,7 +60,7 @@ describe('CacheService', () => {
 
     test('should not expire entries before TTL', () => {
       cache.set('key1', 'value1');
-      
+
       // Advance time less than TTL
       jest.advanceTimersByTime(500);
       expect(cache.get('key1')).toBe('value1');
@@ -70,7 +70,7 @@ describe('CacheService', () => {
       cache.set('key1', 'value1');
       jest.advanceTimersByTime(1001);
       cache.get('key1'); // This should trigger eviction
-      
+
       const stats = cache.getStats();
       expect(stats.evictions).toBe(1);
     });
@@ -192,23 +192,23 @@ describe('CacheService', () => {
     test('should use custom TTL', () => {
       const customCache = new CacheService(2000, 'CustomTTL');
       customCache.set('key1', 'value1');
-      
+
       jest.advanceTimersByTime(1500);
       expect(customCache.get('key1')).toBe('value1');
-      
+
       jest.advanceTimersByTime(600);
       expect(customCache.get('key1')).toBeNull();
-      
+
       customCache.destroy();
     });
 
     test('should use custom name', () => {
       const namedCache = new CacheService(1000, 'CustomName');
       namedCache.set('key1', 'value1');
-      
+
       const stats = namedCache.getStats();
       expect(stats.name).toBe('CustomName');
-      
+
       namedCache.destroy();
     });
   });

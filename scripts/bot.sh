@@ -34,7 +34,7 @@ start() {
     return 0
   fi
 
-  tmux new-session -d -s "$SESSION_NAME" -c "$ROOT_DIR" "pnpm start"
+  tmux new-session -d -s "$SESSION_NAME" -c "$ROOT_DIR" "bun start"
   printf 'Started %s\n' "$SESSION_NAME"
 }
 

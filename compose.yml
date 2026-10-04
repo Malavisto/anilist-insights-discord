@@ -1,6 +1,6 @@
 ---
 services:
-# Main Bot Container
+  # Main Bot Container
   discord-bot:
     image: ghcr.io/malavisto/anilist-insights-discord:main
     container_name: anilist-discord-bot
@@ -10,38 +10,37 @@ services:
     environment:
       - TZ=$TimeZone
       - DISCORD_TOKEN=$DISCORD_TOKEN
-      - METRICS_PORT=9090      
+      - METRICS_PORT=9090
     volumes:
       - ./logs:/usr/src/app/logs
-    env_file: .env   
-#    ports:     # Uncomment if prometheus is hosted externaly
-#      - 9090:9090
+    env_file: .env
+    #    ports:     # Uncomment if prometheus is hosted externaly
+    #      - 9090:9090
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
-# Watchtower for auto updates
+  # Watchtower for auto updates
   watchtower:
-      image: containrrr/watchtower
-      environment:
-        - TZ=$TimeZone
-        - WATCHTOWER_CLEANUP=true
-        - WATCHTOWER_LABEL_ENABLE=true
-      restart: unless-stopped   
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-      command: --interval 1800  # Check for updates every 30 minutes (interval is in seconds)
+    image: ghcr.io/nicholas-fedor/watchtower
+    environment:
+      - TZ=$TimeZone
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 1800 # Check for updates every 30 minutes (interval is in seconds)
 
-# Prometheus for metrics scraping
-  prometheus:  # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
+  # Prometheus for metrics scraping
+  prometheus: # Check https://github.com/Malavisto/anilist-randomizer-discord/tree/main/prometheus for more info
     image: prom/prometheus
     container_name: anilist-prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "9091:9090"
+      - '9091:9090'
     depends_on:
       - discord-bot
-

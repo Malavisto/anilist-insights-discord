@@ -1,20 +1,21 @@
+const { isValidHttpUrl } = require('../../modules/shared/embedHelpers');
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const RandomMangaService = require('../../modules/RandomMangaService');
+const RandomMangaService = require('../../modules/commands/RandomMangaService');
 const { createMockInteraction } = require('../helpers/mockInteraction');
 
-jest.mock('../../logger', () => ({
+jest.mock('../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  warn: jest.fn()
+  warn: jest.fn(),
 }));
 
-jest.mock('../../metrics', () => ({
+jest.mock('../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
-  trackCommand: jest.fn(() => jest.fn())
+  trackCommand: jest.fn(() => jest.fn()),
 }));
 
 describe('RandomMangaService', () => {
@@ -36,9 +37,7 @@ describe('RandomMangaService', () => {
       const definition = RandomMangaService.commandDefinition;
 
       expect(definition.builder.name).toBe('mangarandom');
-      expect(definition.builder.description).toBe(
-        "Get a random manga from a user's AniList"
-      );
+      expect(definition.builder.description).toBe("Get a random manga from a user's AniList");
 
       const usernameOption = definition.builder.options[0];
       expect(usernameOption.name).toBe('username');
@@ -47,6 +46,29 @@ describe('RandomMangaService', () => {
       expect(definition.methodName).toBe('handleRandomMangaCommand');
       expect(definition.metricName).toBe('manga_random');
     });
+  });
+
+  test('deduplicates custom-list IDs before caching and random selection', async () => {
+    mockAdapter.onPost().replyOnce(200, {
+      data: {
+        User: { id: 1 },
+        MediaListCollection: {
+          lists: [
+            { entries: [{ media: { id: 1 } }, { media: { id: 2 } }] },
+            { entries: [{ media: { id: 1 } }] },
+          ],
+        },
+      },
+    });
+    mockAdapter.onPost().replyOnce(200, { data: { MediaList: null } });
+    const random = jest.spyOn(Math, 'random').mockReturnValue(0.75);
+    try {
+      await expect(service.fetchRandomManga('testuser')).rejects.toThrow('No');
+      expect(service.cache.get('manga_ids_testuser')).toEqual([1, 2]);
+      expect(JSON.parse(mockAdapter.history.post[1].data).variables.id).toBe(2);
+    } finally {
+      random.mockRestore();
+    }
   });
 
   describe('fetchRandomManga', () => {
@@ -61,11 +83,11 @@ describe('RandomMangaService', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: mockMangaIds.map(id => ({ media: { id } }))
-              }
-            ]
-          }
-        }
+                entries: mockMangaIds.map((id) => ({ media: { id } })),
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -75,7 +97,7 @@ describe('RandomMangaService', () => {
               id: mockMangaId,
               title: {
                 english: 'Test Manga',
-                romaji: 'テスト マンガ'
+                romaji: 'テスト マンガ',
               },
               chapters: 120,
               volumes: 8,
@@ -87,13 +109,13 @@ describe('RandomMangaService', () => {
               startDate: { year: 2024 },
               coverImage: {
                 large: 'https://example.com/cover.jpg',
-                extraLarge: 'https://example.com/cover_large.jpg'
-              }
+                extraLarge: 'https://example.com/cover_large.jpg',
+              },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       const result = await service.fetchRandomManga(username);
@@ -116,11 +138,11 @@ describe('RandomMangaService', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: mockMangaIds.map(id => ({ media: { id } }))
-              }
-            ]
-          }
-        }
+                entries: mockMangaIds.map((id) => ({ media: { id } })),
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -137,12 +159,12 @@ describe('RandomMangaService', () => {
               description: '',
               averageScore: 80,
               startDate: { year: 2024 },
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       await service.fetchRandomManga(username);
@@ -162,19 +184,19 @@ describe('RandomMangaService', () => {
               description: '',
               averageScore: 75,
               startDate: { year: 2024 },
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 8
-          }
-        }
+            score: 8,
+          },
+        },
       });
 
       const result = await service.fetchRandomManga(username);
       expect(result).toBeDefined();
 
       // Cache hit should be tracked
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -184,13 +206,11 @@ describe('RandomMangaService', () => {
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           User: null,
-          MediaListCollection: { lists: [] }
-        }
+          MediaListCollection: { lists: [] },
+        },
       });
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow(
-        'not found on AniList'
-      );
+      await expect(service.fetchRandomManga(username)).rejects.toThrow('not found on AniList');
     });
 
     test('should throw error if user has no manga', async () => {
@@ -200,19 +220,17 @@ describe('RandomMangaService', () => {
         data: {
           User: { id: 1 },
           MediaListCollection: {
-            lists: []
-          }
-        }
+            lists: [],
+          },
+        },
       });
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow(
-        'No manga found'
-      );
+      await expect(service.fetchRandomManga(username)).rejects.toThrow('No manga found');
     });
 
     test('should track API requests', async () => {
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {
@@ -220,11 +238,11 @@ describe('RandomMangaService', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: [{ media: { id: 1 } }]
-              }
-            ]
-          }
-        }
+                entries: [{ media: { id: 1 } }],
+              },
+            ],
+          },
+        },
       });
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
@@ -241,12 +259,12 @@ describe('RandomMangaService', () => {
               description: '',
               averageScore: 80,
               startDate: { year: 2024 },
-              coverImage: { large: 'url', extraLarge: 'url' }
+              coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
-            score: 9
-          }
-        }
+            score: 9,
+          },
+        },
       });
 
       try {
@@ -255,11 +273,7 @@ describe('RandomMangaService', () => {
         // Ignore
       }
 
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith(
-        'manga_random',
-        'started',
-        username
-      );
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('manga_random', 'started', username);
     });
   });
 
@@ -276,34 +290,34 @@ describe('RandomMangaService', () => {
       const username = 'testuser';
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
-        data: undefined
+        data: undefined,
       });
 
       await expect(service.fetchRandomManga(username)).rejects.toThrow();
     });
 
-    test('does not track success when the API returns no MediaList', async () => {
+    test('counts both HTTP responses even when no MediaList is returned', async () => {
       const username = 'testuser';
-      const metrics = require('../../metrics');
+      const metrics = require('../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
           User: { id: 1 },
           MediaListCollection: {
-            lists: [{ entries: [{ media: { id: 5 } }] }]
-          }
-        }
+            lists: [{ entries: [{ media: { id: 5 } }] }],
+          },
+        },
       });
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
-        data: { MediaList: null }
+        data: { MediaList: null },
       });
 
       await expect(service.fetchRandomManga(username)).rejects.toThrow('No manga data found');
 
       const successCalls = metrics.trackApiRequest.mock.calls.filter(
-        call => call[1] === 'success'
+        (call) => call[1] === 'success',
       );
-      expect(successCalls).toHaveLength(0);
+      expect(successCalls).toHaveLength(2);
     });
   });
 
@@ -312,9 +326,9 @@ describe('RandomMangaService', () => {
       data: {
         User: { id: 1 },
         MediaListCollection: {
-          lists: [{ entries: [{ media: { id: 5 } }] }]
-        }
-      }
+          lists: [{ entries: [{ media: { id: 5 } }] }],
+        },
+      },
     };
 
     const mockMangaResponse = {
@@ -333,13 +347,13 @@ describe('RandomMangaService', () => {
             startDate: { year: 2024 },
             coverImage: {
               large: 'https://example.com/cover.jpg',
-              extraLarge: 'https://example.com/cover_large.jpg'
-            }
+              extraLarge: 'https://example.com/cover_large.jpg',
+            },
           },
           status: 'COMPLETED',
-          score: 9
-        }
-      }
+          score: 9,
+        },
+      },
     };
 
     test('should defer then edit the reply with the manga embed on success', async () => {
@@ -359,13 +373,13 @@ describe('RandomMangaService', () => {
     test('should ask for a username when the option is missing', async () => {
       const interaction = createMockInteraction({
         commandName: 'mangarandom',
-        options: { getString: jest.fn().mockReturnValue(undefined) }
+        options: { getString: jest.fn().mockReturnValue(undefined) },
       });
 
       await service.handleRandomMangaCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: '❌ Please provide a valid AniList username.'
+        content: '❌ Please provide a valid AniList username.',
       });
       expect(mockAdapter.history.post.length).toBe(0);
     });
@@ -377,14 +391,14 @@ describe('RandomMangaService', () => {
       await service.handleRandomMangaCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: expect.stringContaining('❌ Error fetching manga for testuser')
+        content: expect.stringContaining('❌ Error fetching manga for testuser'),
       });
     });
 
     test('should fall back to reply() when deferReply itself fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'mangarandom',
-        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction'))
+        deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
       });
 
       await service.handleRandomMangaCommand(interaction);
@@ -392,18 +406,19 @@ describe('RandomMangaService', () => {
       expect(interaction.reply).toHaveBeenCalledWith(
         expect.objectContaining({
           content: expect.stringContaining('An unexpected error occurred'),
-          ephemeral: true
-        })
+          ephemeral: true,
+        }),
       );
       expect(interaction.editReply).not.toHaveBeenCalled();
     });
 
-    test('should fall back to an ephemeral editReply when the friendly error send fails', async () => {
+    test('should fall back to editReply with the deferred visibility when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
         commandName: 'mangarandom',
-        editReply: jest.fn()
+        editReply: jest
+          .fn()
           .mockRejectedValueOnce(new Error('cannot edit'))
-          .mockResolvedValueOnce(undefined)
+          .mockResolvedValueOnce(undefined),
       });
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
@@ -412,25 +427,24 @@ describe('RandomMangaService', () => {
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
         content: '❌ An unexpected error occurred. Please try again later.',
-        ephemeral: true
       });
     });
 
     test('logs and stays silent when every response path fails', async () => {
-      const metrics = require('../../metrics');
-      const logger = require('../../logger');
+      const metrics = require('../../modules/observability/metrics');
+      const logger = require('../../modules/observability/logger');
       const interaction = createMockInteraction({
         commandName: 'mangarandom',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
-        reply: jest.fn().mockRejectedValue(new Error('cannot reply'))
+        reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleRandomMangaCommand(interaction)).resolves.toBeUndefined();
+      await expect(service.handleRandomMangaCommand(interaction)).resolves.toBe(false);
 
       expect(metrics.trackError).toHaveBeenCalledWith('Error', 'manga_random');
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to send final error message',
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -448,13 +462,13 @@ describe('RandomMangaService', () => {
       description: 'A test manga',
       userScore: 9,
       averageScore: 85,
-      coverImage: 'https://example.com/cover_large.jpg'
+      coverImage: 'https://example.com/cover_large.jpg',
     };
 
     test('should strip HTML tags and collapse whitespace in descriptions', () => {
       const embed = service.createMangaEmbed({
         ...baseManga,
-        description: '<p>Hello world</p>\n\n  second part'
+        description: '<p>Hello world</p>\n\n  second part',
       });
 
       expect(embed.data.description).toBe('📝 Hello world second part');
@@ -463,7 +477,7 @@ describe('RandomMangaService', () => {
     test('should truncate descriptions over 200 characters with an ellipsis', () => {
       const embed = service.createMangaEmbed({
         ...baseManga,
-        description: 'a'.repeat(300)
+        description: 'a'.repeat(300),
       });
 
       expect(embed.data.description).toBe(`📝 ${'a'.repeat(200)}...`);
@@ -478,25 +492,25 @@ describe('RandomMangaService', () => {
     test('should map known status and format values to emojis', () => {
       const embed = service.createMangaEmbed(baseManga);
 
-      expect(embed.data.fields.find(f => f.name === '📡 Status').value).toBe('✅ COMPLETED');
-      expect(embed.data.fields.find(f => f.name === '🎭 Format').value).toBe('📖 MANGA');
+      expect(embed.data.fields.find((f) => f.name === '📡 Status').value).toBe('✅ COMPLETED');
+      expect(embed.data.fields.find((f) => f.name === '🎭 Format').value).toBe('📖 MANGA');
     });
 
     test('should use fallback emojis for unknown status and format', () => {
       const embed = service.createMangaEmbed({
         ...baseManga,
         status: 'HIATUS',
-        format: 'UNKNOWN'
+        format: 'UNKNOWN',
       });
 
-      expect(embed.data.fields.find(f => f.name === '📡 Status').value).toBe('❓ HIATUS');
-      expect(embed.data.fields.find(f => f.name === '🎭 Format').value).toBe('🎴 UNKNOWN');
+      expect(embed.data.fields.find((f) => f.name === '📡 Status').value).toBe('❓ HIATUS');
+      expect(embed.data.fields.find((f) => f.name === '🎭 Format').value).toBe('🎴 UNKNOWN');
     });
 
     test('should map manga-specific format emojis', () => {
       const novel = service.createMangaEmbed({ ...baseManga, format: 'NOVEL' });
 
-      expect(novel.data.fields.find(f => f.name === '🎭 Format').value).toBe('📓 NOVEL');
+      expect(novel.data.fields.find((f) => f.name === '🎭 Format').value).toBe('📓 NOVEL');
     });
 
     test('should build title, link and color from the manga', () => {
@@ -509,17 +523,19 @@ describe('RandomMangaService', () => {
 
     test('should render genre hashtags and the empty-list fallback', () => {
       const embed = service.createMangaEmbed(baseManga);
-      expect(embed.data.fields.find(f => f.name === '🏷️ Genres').value).toBe('#Action #Adventure');
+      expect(embed.data.fields.find((f) => f.name === '🏷️ Genres').value).toBe(
+        '#Action #Adventure',
+      );
 
       const emptyGenres = service.createMangaEmbed({ ...baseManga, genres: [] });
-      expect(emptyGenres.data.fields.find(f => f.name === '🏷️ Genres').value).toBe('No genres');
+      expect(emptyGenres.data.fields.find((f) => f.name === '🏷️ Genres').value).toBe('No genres');
     });
 
     test('should show chapters and volumes with fallbacks for missing values', () => {
       const embed = service.createMangaEmbed(baseManga);
 
-      expect(embed.data.fields.find(f => f.name === '📖 Chapters').value).toBe('🔢 120');
-      expect(embed.data.fields.find(f => f.name === '📚 Volumes').value).toBe('🔢 8');
+      expect(embed.data.fields.find((f) => f.name === '📖 Chapters').value).toBe('🔢 120');
+      expect(embed.data.fields.find((f) => f.name === '📚 Volumes').value).toBe('🔢 8');
     });
 
     test('should use fallbacks for missing chapters, volumes, year, scores and zero averageScore', () => {
@@ -529,14 +545,14 @@ describe('RandomMangaService', () => {
         volumes: 'Unknown',
         year: null,
         userScore: null,
-        averageScore: 0
+        averageScore: 0,
       });
 
-      expect(embed.data.fields.find(f => f.name === '📖 Chapters').value).toBe('🔢 Unknown');
-      expect(embed.data.fields.find(f => f.name === '📚 Volumes').value).toBe('🔢 Unknown');
-      expect(embed.data.fields.find(f => f.name === '📅 Year').value).toBe('🗓️ Unknown');
-      expect(embed.data.fields.find(f => f.name === '⭐ Your Score').value).toBe('📊 Not rated');
-      expect(embed.data.fields.find(f => f.name === '📈 Average Score').value).toBe('🌈 N/A%');
+      expect(embed.data.fields.find((f) => f.name === '📖 Chapters').value).toBe('🔢 Unknown');
+      expect(embed.data.fields.find((f) => f.name === '📚 Volumes').value).toBe('🔢 Unknown');
+      expect(embed.data.fields.find((f) => f.name === '📅 Year').value).toBe('🗓️ Unknown');
+      expect(embed.data.fields.find((f) => f.name === '⭐ Your Score').value).toBe('📊 Not rated');
+      expect(embed.data.fields.find((f) => f.name === '📈 Average Score').value).toBe('🌈 N/A%');
     });
 
     test('should set the cover image for a valid https URL', () => {
@@ -546,7 +562,10 @@ describe('RandomMangaService', () => {
     });
 
     test('should omit the image for non-http URLs', () => {
-      const ftp = service.createMangaEmbed({ ...baseManga, coverImage: 'ftp://example.com/cover.jpg' });
+      const ftp = service.createMangaEmbed({
+        ...baseManga,
+        coverImage: 'ftp://example.com/cover.jpg',
+      });
       const garbage = service.createMangaEmbed({ ...baseManga, coverImage: 'not-a-url' });
 
       expect(ftp.data.image).toBeUndefined();
@@ -556,13 +575,13 @@ describe('RandomMangaService', () => {
 
   describe('isValidHttpUrl', () => {
     test('should accept https and http URLs', () => {
-      expect(service.isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
-      expect(service.isValidHttpUrl('http://example.com')).toBe(true);
+      expect(isValidHttpUrl('https://example.com/a.jpg')).toBe(true);
+      expect(isValidHttpUrl('http://example.com')).toBe(true);
     });
 
     test('should reject other schemes and malformed strings', () => {
-      expect(service.isValidHttpUrl('ftp://example.com/file')).toBe(false);
-      expect(service.isValidHttpUrl('not a url')).toBe(false);
+      expect(isValidHttpUrl('ftp://example.com/file')).toBe(false);
+      expect(isValidHttpUrl('not a url')).toBe(false);
     });
   });
 });

@@ -1,6 +1,6 @@
 // Smoke test for the real winston configuration - no log calls are made,
 // so the file transports stay empty; close() releases the streams.
-const logger = require('../../logger');
+const logger = require('../../modules/observability/logger');
 
 describe('logger', () => {
   test('exports a winston logger at info level', () => {
@@ -8,18 +8,18 @@ describe('logger', () => {
   });
 
   test('configures console plus two rotating file transports', () => {
-    const fileTransports = logger.transports.filter(t => t.filename);
+    const fileTransports = logger.transports.filter((t) => t.filename);
 
     expect(logger.transports.length).toBe(3);
     // winston File transports expose dirname + basename separately
-    const paths = fileTransports.map(t => `${t.dirname}/${t.filename}`);
+    const paths = fileTransports.map((t) => `${t.dirname}/${t.filename}`);
     expect(paths).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('logs/info.log'),
-        expect.stringContaining('logs/error.log')
-      ])
+        require('path').resolve(__dirname, '../../logs/info.log'),
+        require('path').resolve(__dirname, '../../logs/error.log'),
+      ]),
     );
-    fileTransports.forEach(t => {
+    fileTransports.forEach((t) => {
       expect(t.maxsize).toBe(5242880); // 5MB
       expect(t.maxFiles).toBe(5);
     });
