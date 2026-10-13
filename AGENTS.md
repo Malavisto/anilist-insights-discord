@@ -52,6 +52,13 @@ Services use these singletons directly or through shared helpers:
 
 ## Testing
 
+When developing new features, fixing bugs, refactoring, or changing behavior, use the `$test-driven-development` skill. Read and follow [its instructions](.agents/skills/test-driven-development/SKILL.md) before writing implementation code.
+
+- Write a test first and run it to verify that it fails for the expected reason before changing production code.
+- Write the minimal code needed to pass, then refactor while keeping tests green.
+- Run the full suite with `bun run test` before marking development work complete, and always after modifying JavaScript files. Report any failures, including pre-existing ones.
+- Ask for confirmation before taking an exception to the skill's TDD requirements.
+
 Three tiers under `__tests__/`: `unit/` (one file per service), `integration/` (cross-service interactions), `e2e/` (full command flows against mock Discord interactions). `__tests__/setup.js` sets `NODE_ENV=test` and the global 10s timeout. New services get a unit test following the existing pattern: `jest.mock` logger/metrics, wrap axios in `MockAdapter`. Coverage thresholds above will fail `test:coverage` if dropped.
 
 ## Operations

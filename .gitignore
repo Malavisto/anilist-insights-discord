@@ -136,3 +136,6 @@ dist
 
 # Docker Overide
 compose.override.yml
+
+# AI Agents
+.codex/config.toml
