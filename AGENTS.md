@@ -59,7 +59,7 @@ When developing new features, fixing bugs, refactoring, or changing behavior, us
 - Run the full suite with `bun run test` before marking development work complete, and always after modifying JavaScript files. Report any failures, including pre-existing ones.
 - Ask for confirmation before taking an exception to the skill's TDD requirements.
 
-Three tiers under `__tests__/`: `unit/` (one file per service), `integration/` (cross-service interactions), `e2e/` (full command flows against mock Discord interactions). `__tests__/setup.js` sets `NODE_ENV=test` and the global 10s timeout. New services get a unit test following the existing pattern: `jest.mock` logger/metrics, wrap axios in `MockAdapter`. Coverage thresholds above will fail `test:coverage` if dropped.
+Three tiers under `__tests__/`: `unit/` (grouped into `commands/`, `shared/`, and `observability/`, with `app.test.js` at the unit root), `integration/` (cross-service interactions), `e2e/` (full command flows against mock Discord interactions). `__tests__/setup.js` sets `NODE_ENV=test` and the global 10s timeout. New services get a unit test following the existing pattern: `jest.mock` logger/metrics, wrap axios in `MockAdapter`. Coverage thresholds above will fail `test:coverage` if dropped.
 
 ## Operations
 

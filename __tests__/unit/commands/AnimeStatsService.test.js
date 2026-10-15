@@ -1,16 +1,16 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const AnimeStatsService = require('../../modules/commands/AnimeStatsService');
-const { createMockInteraction } = require('../helpers/mockInteraction');
+const AnimeStatsService = require('../../../modules/commands/AnimeStatsService');
+const { createMockInteraction } = require('../../helpers/mockInteraction');
 
-jest.mock('../../modules/observability/logger', () => ({
+jest.mock('../../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../modules/observability/metrics', () => ({
+jest.mock('../../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
@@ -168,7 +168,7 @@ describe('AnimeStatsService', () => {
       expect(secondResult).toEqual({ ...firstResult, source: 'cache' });
       expect(firstResult.source).toBe('anilist');
       expect(service.cache.get(`stats_${username}`)).not.toHaveProperty('source');
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -187,7 +187,7 @@ describe('AnimeStatsService', () => {
 
     test('should track API requests', async () => {
       const username = 'testuser';
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {
@@ -213,7 +213,7 @@ describe('AnimeStatsService', () => {
       expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_stats', 'started', username);
     });
     test('counts the HTTP response separately from a missing user', async () => {
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -257,7 +257,7 @@ describe('AnimeStatsService', () => {
     await service.fetchUserAnimeStats('testuser');
     expect(mockAdapter.history.post).toHaveLength(1);
     expect(
-      require('../../modules/observability/metrics').trackApiRequest.mock.calls.map(
+      require('../../../modules/observability/metrics').trackApiRequest.mock.calls.map(
         (call) => call[1],
       ),
     ).toEqual(['started', 'success']);
@@ -381,8 +381,8 @@ describe('AnimeStatsService', () => {
     });
 
     test('should log and stay silent when every response path fails', async () => {
-      const metrics = require('../../modules/observability/metrics');
-      const logger = require('../../modules/observability/logger');
+      const metrics = require('../../../modules/observability/metrics');
+      const logger = require('../../../modules/observability/logger');
       const interaction = createMockInteraction({
         commandName: 'animestats',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
@@ -454,7 +454,7 @@ describe('AnimeStatsService', () => {
 
     test('should track errors', async () => {
       const username = 'testuser';
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(500, {
         errors: [{ message: 'Server error' }],

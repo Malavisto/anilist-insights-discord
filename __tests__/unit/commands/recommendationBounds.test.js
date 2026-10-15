@@ -1,12 +1,12 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const Service = require('../../modules/commands/AnimeRecommendationService');
-jest.mock('../../modules/observability/logger', () => ({
+const Service = require('../../../modules/commands/AnimeRecommendationService');
+jest.mock('../../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
 }));
-jest.mock('../../modules/observability/metrics', () => ({
+jest.mock('../../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),

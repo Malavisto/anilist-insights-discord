@@ -1,9 +1,9 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const request = require('../../modules/shared/anilistRequest');
-const metrics = require('../../modules/observability/metrics');
+const request = require('../../../modules/shared/anilistRequest');
+const metrics = require('../../../modules/observability/metrics');
 
-jest.mock('../../modules/observability/metrics', () => ({ trackApiRequest: jest.fn() }));
+jest.mock('../../../modules/observability/metrics', () => ({ trackApiRequest: jest.fn() }));
 
 describe('AniList HTTP requests', () => {
   let adapter;
