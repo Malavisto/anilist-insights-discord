@@ -19,13 +19,13 @@ bun run test -- CacheService.test.js -t "test name"   # single case
 bun bot:start|stop|status|attach      # tmux session `anilist-bot`; stop sends SIGINT for graceful shutdown
 ```
 
-Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-mock-adapter`. ESLint (flat config in `eslint.config.mjs`) and Prettier are wired up via the `lint` / `lint:fix` / `format` / `format:check` scripts, and CI's lint job is blocking.
+Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-mock-adapter`. ESLint (flat config in `eslint.config.mjs`) and Prettier are wired up via the `lint` / `lint:fix` / `format` / `format:check` scripts, and only CI's ESLint step is advisory; installation, formatting, tests, coverage, and aggregate results are blocking.
 
 ## Architecture
 
 ### Command wiring (key cross-file invariant)
 
-`app.js` builds a single command registry during initialization from each service's static `commandDefinition` (`{ builder, methodName, metricName }`). Registration and dispatch both use that registry. Add a service once to the constructor's service list when adding a command.
+`app.js` builds a single command registry during initialization from each service's static `commandDefinition` (`{ builder, methodName, metricName }`). Registration at startup and on `guildCreate`, and dispatch, all use that registry. Construction does not log in or listen; `start()` coordinates both and `initializeBot()` awaits it. Shared idempotent shutdown attempts every cleanup with a 10-second deadline. `/readyz` requires HTTP listening, Discord readiness, and no shutdown. Add a service once to the constructor's service list when adding a command.
 
 Handlers return `true` on success and `false` after reporting a failure. The dispatcher records that outcome through `metricsService.trackCommand(...)` and ends the timer in `finally`.
 
@@ -39,7 +39,7 @@ One service per command (`RandomAnimeService`, `RandomMangaService`, `AnimeStats
 
 The two `Random*` services deliberately split their fetch into two GraphQL queries — one to grab the user's media ID list, then one to fetch the randomly chosen entry's details. Don't merge these into a single query.
 
-Each cache-enabled service constructor (all except `AnimeCoverService`) creates a **private** `CacheService`: in-memory TTL Map (5-min TTL, 60s background sweep, `unref()`'d timer), keyed like `recommendation_${username}` (the `Random*` services cache the fetched ID list first, e.g. `manga_ids_${username}`). Recommendations cache up to five unseen candidates and choose again per command, avoiding consecutive repeats when alternatives exist. Caching is per-process only — nothing persists across restarts.
+Each cache-enabled service constructor (all except `AnimeCoverService`) creates a **private** `CacheService`: in-memory TTL Map (5-min TTL, 60s background sweep, `unref()`'d timer), keyed like `recommendation_${username}` (the `Random*` services cache the fetched ID list first, e.g. `manga_ids_${username}`). Recommendations deduplicate list IDs (highest score, first on ties), exclude all listed titles, and search at most ten pages of 25 candidates within a 30-second operation deadline (including the list request). Partial candidates survive search limits, while HTTP/GraphQL errors remain failures. Recommendations cache up to five unseen candidates and choose again per command, avoiding consecutive repeats when alternatives exist. Caching is per-process only — nothing persists across restarts.
 
 Shared helpers live in `modules/shared/`. `anilistRequest` owns HTTP timeout, headers, GraphQL error validation, and per-request metrics. Cache hits only increment cache metrics. Shared embed and last-resort reply helpers live in `embedHelpers.js` and `replyError.js`.
 
@@ -47,7 +47,7 @@ Shared helpers live in `modules/shared/`. `anilistRequest` owns HTTP timeout, he
 
 Services use these singletons directly or through shared helpers:
 
-- `modules/observability/metrics.js` — `MetricsService` singleton over `@prometheus-io/client`. `trackApiRequest`/`updateUserStats` **sha256-hash usernames** (12 chars) before they enter metric labels — never pass raw usernames into labels. Metric-tracking methods swallow their own errors.
+- `modules/observability/metrics.js` — `MetricsService` singleton over `@prometheus-io/client`. `trackApiRequest` labels only endpoint/status, with no username label. `updateUserStats` **sha256-hashes usernames** (12 chars) for the retained user-stats gauge — never pass raw usernames into labels. Metric-tracking methods swallow their own errors.
 - `modules/observability/logger.js` — winston singleton; JSON logs to `logs/info.log` and `logs/error.log` (runtime artifacts, not source).
 
 ## Testing
@@ -64,8 +64,8 @@ Three tiers under `__tests__/`: `unit/` (one file per service), `integration/` (
 ## Operations
 
 - Config lives in `.env` (`DISCORD_TOKEN`, optional `METRICS_PORT`, default 9090 where the in-process Express server exposes `/metrics`).
-- `compose.yml` ships the bot plus watchtower (auto-pulls `ghcr.io/malavisto/anilist-insights-discord:main`) and Prometheus scraping `anilist-discord-bot:9090` via `prometheus/prometheus.yml` — update that file if the container name or port changes.
-- Pushes to `main` deploy via SSH to `/opt/anilist-discord` and recreate the Docker Compose stack (`.github/workflows/deploy.yml`). Keep `compose.yml`, Prometheus configuration, and that workflow consistent when touching deployment config.
+- `compose.yml` ships the bot plus watchtower (bot updates disabled; workflow deploys an immutable digest) and Prometheus scraping `anilist-discord-bot:9090` via `prometheus/prometheus.yml` — update that file if the container name or port changes.
+- Pushes to `main` deploy via SSH to `/opt/anilist-discord` through `scripts/deploy.sh` (`.github/workflows/deploy.yml`). The external Ubuntu host uses sudo-rs. The remote `github` user invokes the root-owned `/usr/local/sbin/anilist-docker` helper through eight exact sudoers entries (no regexes). `ops/anilist-docker` and `ops/sudoers/anilist-deploy` require administrator installation on that host; CI must never sudo a helper from the writable checkout. Deployment preserves `.deployment/compose.yml` and waits for Docker health. Rollouts are serialized; manual rollback restores `.deployment/previous`. Compose uses a Bun `/readyz` probe (3s timeout, 5s interval, 20s start period, five retries). Keep `compose.yml`, Prometheus configuration, and that workflow consistent when touching deployment config.
 - Feature branches merge into `dev` via PR; only `dev` merges into `main`, which triggers deployment.
 
 ## Conventions

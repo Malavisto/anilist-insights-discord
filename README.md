@@ -23,7 +23,7 @@ This project was made as an testing ground for [me](https://github.com/malavisto
 
 ### Prerequisites
 
-1. [Bun](https://bun.com/) version 4.1.0 or later installed or [Docker](https://www.docker.com/) with docker compose.
+1. [Bun](https://bun.com/) 1.4.x installed or [Docker](https://www.docker.com/) with docker compose.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
 3. Install dependencies **Bun Only**:
    ```
@@ -56,7 +56,7 @@ or
 docker compose up -d
 ```
 
-The bot will log in and register the commands in all the servers it's added to.
+The bot registers all five commands at startup and whenever it joins a new server. Registration failures are isolated to each server. Construction does not start the bot; `initializeBot()` awaits HTTP listening and Discord login. Startup failures clean up resources and exit nonzero. Shutdown attempts every cleanup and has a 10-second deadline.
 
 To run it in the background with tmux:
 
@@ -84,7 +84,9 @@ bun bot:attach
 ### Anime Recomendations
 
 1. Use the `/animerecommend` command in Discord and provide your AniList username.
-2. The bot generate recomendations based on your anilist and pick one out of five anime and display its details in an embed.
+2. The bot uses your three highest-rated unique titles to select genres and caches up to five unseen recommendations for five minutes. Duplicate entries keep their highest score (first occurrence on ties); all listed titles, including unrated entries, are excluded.
+3. Each uncached operation has a 30-second deadline, one list request and at most ten candidate requests of 25 titles each. Each request also has a 10-second timeout. Searches stop at a full pool, final/empty/repeated page, request limit, or deadline. Distinct seen-only pages allow further searching. Partial results at a search limit are cached; HTTP and GraphQL failures remain errors.
+4. Cached selections avoid consecutive repeats when alternatives exist.
 
 ### Anime Stats
 
@@ -100,7 +102,7 @@ bun bot:attach
 
 ### Prerequisites
 
-1. [Bun](https://bun.com/) version 4.1.0 or later installed.
+1. [Bun](https://bun.com/) 1.4.x installed.
 2. A Discord bot token. Create one on the [Discord Developer Portal](https://discord.com/developers/applications).
 3. Install dependencies:
    ```
@@ -160,3 +162,35 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Validation
+
+Use Bun 1.4.x and `bun run test` for the full Jest suite. Tests use mocked AniList HTTP and need no token or `.env`. Run `bun run test:coverage`, `bun run lint`, and `bun run format:check` before delivery. Only the ESLint step is advisory in CI; dependency installation, formatting, tests, coverage, and aggregate results remain blocking. Features and fixes follow the repository's test-first workflow.
+
+## Readiness and deployment
+
+`/readyz` on `METRICS_PORT` (default 9090) returns 200 only while HTTP is listening, Discord is ready, and shutdown has not started; connecting, disconnected, and stopping states return 503. This verifies the Discord connection, not AniList availability or command registration in every server. `/metrics` and the Prometheus target `anilist-discord-bot:9090` are unchanged.
+
+Compose probes readiness with Bun inside the bot container: a 3-second request timeout, 5-second interval, 20-second start period, and five retries. Docker allows 4 seconds for the probe process to exit. Watchtower updates are disabled for this bot.
+
+Feature branches merge into `dev`; only `dev` merges into `main`. The deployment workflow serializes rollouts without cancelling an active deployment. It passes the build's immutable image digest and matching repository SHA to `scripts/deploy.sh`. The remote host needs Bash, Git, Docker Compose v2, `flock`, registry access, and the restricted passwordless sudo permissions defined in `ops/sudoers/anilist-deploy`. Docker operations run through `sudo -n /usr/local/sbin/anilist-docker`, an administrator-owned helper with eight exact sudoers entries compatible with sudo-rs. The helper validates image/project values from stdin; no sudoers regexes or unrestricted Docker permissions are required. An administrator must install both `ops/anilist-docker` and the replacement `ops/sudoers/anilist-deploy` policy on the external server before rollout; preparing these files locally does not change remote permissions.
+
+The script runs from `/opt/anilist-discord`, rejects tracked local modifications, fetches Git updates and pulls the selected image before replacing services, and checks the image revision label against the selected SHA, and preserves the existing Compose project name from the running bot container. An existing `anilist-discord-bot` is required. It reads the previous repository revision from the running image's `org.opencontainers.image.revision` label (which must be present and available locally in Git), and saves it with the actual Docker image ID in `.deployment/previous`. Keep that local image available for rollback. It checks out the selected SHA and persists its image in `.deployment/compose.yml`; the base Compose environment, mounts, and Prometheus target still apply. It pulls the remaining services before `up -d`, without an initial `down`, then polls container health for at most 120 seconds. Unhealthy, terminated, missing containers, and timeouts fail the job. Failed rollouts are left for manual investigation; there is no automatic rollback.
+
+For manual rollback, from the deployment checkout run:
+
+```bash
+bash scripts/deploy.sh rollback
+```
+
+Rollback restores the saved revision and image and uses the same readiness verification. Save a copy of the current deployment script outside the checkout before rolling back across its introduction; old revisions may not contain it. An image predating `/readyz` cannot pass this readiness check, so validate the initial migration recovery procedure separately on the host. Host state is protected by a local deployment lock. Avoid independent Compose or Watchtower updates during a rollout.
+
+For subsequent manual Compose operations, run from the remote deployment checkout and supply the saved project name to the fixed helper:
+
+```bash
+sed -n '3p' .deployment/previous | sudo -n /usr/local/sbin/anilist-docker compose-up
+```
+
+This retains the persisted override and project identity. The helper and its parent directories must be root-owned and not writable by the deployment user; helper updates require administrator review and installation.
+
+Production rollouts and external Grafana dashboards have not been verified by the local tests.
