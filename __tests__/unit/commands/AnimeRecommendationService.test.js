@@ -1,16 +1,16 @@
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const AnimeRecommendationService = require('../../modules/commands/AnimeRecommendationService');
-const { createMockInteraction } = require('../helpers/mockInteraction');
+const AnimeRecommendationService = require('../../../modules/commands/AnimeRecommendationService');
+const { createMockInteraction } = require('../../helpers/mockInteraction');
 
-jest.mock('../../modules/observability/logger', () => ({
+jest.mock('../../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../modules/observability/metrics', () => ({
+jest.mock('../../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
@@ -74,7 +74,7 @@ describe('AnimeRecommendationService', () => {
         .map((request) => JSON.parse(request.data).variables.page);
       expect(pages).toEqual([1, 2]);
       expect(
-        require('../../modules/observability/metrics').trackApiRequest.mock.calls.map(
+        require('../../../modules/observability/metrics').trackApiRequest.mock.calls.map(
           (call) => call[1],
         ),
       ).toEqual(['started', 'success', 'started', 'success', 'started', 'success']);
@@ -111,9 +111,9 @@ describe('AnimeRecommendationService', () => {
           service.cache.get('recommendation_malavisto').candidates.map((anime) => anime.id),
         ).toEqual([2, 3]);
         expect(mockAdapter.history.post).toHaveLength(4);
-        expect(require('../../modules/observability/metrics').trackCacheHit).toHaveBeenCalledTimes(
-          4,
-        );
+        expect(
+          require('../../../modules/observability/metrics').trackCacheHit,
+        ).toHaveBeenCalledTimes(4);
       } finally {
         random.mockRestore();
       }
@@ -335,7 +335,7 @@ describe('AnimeRecommendationService', () => {
       const secondResult = await service.fetchAnimeRecommendation(username);
 
       expect(secondResult).toEqual(firstResult);
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -437,7 +437,7 @@ describe('AnimeRecommendationService', () => {
 
     test('should track API requests', async () => {
       const username = 'testuser';
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {
@@ -639,7 +639,7 @@ describe('AnimeRecommendationService', () => {
     });
 
     test('should log and stay silent when every response path fails', async () => {
-      const logger = require('../../modules/observability/logger');
+      const logger = require('../../../modules/observability/logger');
       const interaction = createMockInteraction({
         commandName: 'animerecommend',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),

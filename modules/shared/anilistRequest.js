@@ -2,14 +2,16 @@ const axios = require('axios');
 const metricsService = require('../observability/metrics');
 
 // Count actual HTTP requests, including each query in a multi-query fetch.
-async function anilistRequest(query, variables, endpoint, username) {
+async function anilistRequest(query, variables, endpoint, username, signal) {
   metricsService.trackApiRequest(endpoint, 'started', username);
   try {
     const response = await axios.post(
       'https://graphql.anilist.co',
       { query, variables },
       {
-        signal: AbortSignal.timeout(10000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(10000)])
+          : AbortSignal.timeout(10000),
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       },
     );

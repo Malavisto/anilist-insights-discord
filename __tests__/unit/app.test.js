@@ -82,7 +82,7 @@ jest.mock('discord.js', () => ({
 }));
 
 const mockApp = { get: jest.fn(), listen: jest.fn() };
-const mockServer = { close: jest.fn((cb) => cb && cb()) };
+const mockServer = { once: jest.fn(), listening: true, close: jest.fn((cb) => cb && cb()) };
 
 jest.mock('express', () => jest.fn(() => mockApp));
 
@@ -96,7 +96,7 @@ describe('AniListDiscordBot', () => {
     return found[1];
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     mockClient = {
@@ -111,7 +111,10 @@ describe('AniListDiscordBot', () => {
     Client.mockImplementation(() => mockClient);
 
     mockApp.get.mockReturnValue(undefined);
-    mockApp.listen.mockReturnValue(mockServer);
+    mockApp.listen.mockImplementation((port, cb) => {
+      queueMicrotask(cb);
+      return mockServer;
+    });
     mockServer.close.mockImplementation((cb) => cb && cb());
 
     // Intercept process-level registration/exit before the bot installs its handlers
@@ -119,6 +122,8 @@ describe('AniListDiscordBot', () => {
     jest.spyOn(process, 'exit').mockImplementation(() => undefined);
 
     bot = new AniListDiscordBot('test-token');
+    expect(mockClient.login).not.toHaveBeenCalled();
+    await bot.start();
   });
 
   afterEach(() => {
@@ -167,6 +172,100 @@ describe('AniListDiscordBot', () => {
 
       expect(events).toEqual(expect.arrayContaining(['SIGINT', 'SIGTERM', 'unhandledRejection']));
     });
+  });
+
+  test('login rejection cleans up without exposing the token', async () => {
+    const other = new AniListDiscordBot('secret-token');
+    mockClient.login.mockRejectedValueOnce(new Error('secret-token invalid login'));
+    await expect(other.start()).rejects.toThrow('Bot startup failed');
+    expect(mockClient.destroy).toHaveBeenCalled();
+    expect(mockServer.close).toHaveBeenCalled();
+    expect(JSON.stringify(logger.error.mock.calls)).not.toContain('secret-token');
+    expect(JSON.stringify(logger.error.mock.calls)).toContain('invalid login');
+    process.exitCode = 0;
+  });
+
+  test('HTTP listen errors trigger cleanup while login is pending', async () => {
+    mockApp.listen.mockImplementationOnce(() => mockServer);
+    let finishLogin;
+    mockClient.login.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishLogin = resolve;
+        }),
+    );
+    const other = new AniListDiscordBot('test-token');
+    const starting = other.start();
+    await Promise.resolve();
+    mockServer.once.mock.calls.at(-1)[1](new Error('EADDRINUSE'));
+    await expect(starting).rejects.toThrow('Bot startup failed');
+    finishLogin();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mockClient.destroy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    process.exitCode = 0;
+  });
+
+  test('shutdown attempts all resources and waits for Discord destruction', async () => {
+    let finishDestroy;
+    mockClient.destroy.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishDestroy = resolve;
+        }),
+    );
+    mockRandom.cache = {
+      destroy: jest.fn(() => {
+        throw new Error('cache failed');
+      }),
+    };
+    const stopping = bot.shutdown();
+    let finished = false;
+    stopping.then(() => {
+      finished = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mockServer.close).toHaveBeenCalled();
+    expect(finished).toBe(false);
+    finishDestroy();
+    await stopping;
+    delete mockRandom.cache;
+  });
+
+  test('stalled cleanup is bounded by ten seconds and repeated shutdown shares completion', async () => {
+    jest.useFakeTimers();
+    mockClient.destroy.mockImplementationOnce(() => new Promise(() => {}));
+    const stopping = bot.shutdown();
+    expect(bot.shutdown()).toBe(stopping);
+    await jest.advanceTimersByTimeAsync(10000);
+    await stopping;
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    jest.useRealTimers();
+  });
+
+  test('readiness follows Discord connection and shutdown', async () => {
+    const route = mockApp.get.mock.calls.find(([path]) => path === '/readyz')[1];
+    const res = { status: jest.fn(() => res), send: jest.fn() };
+    route({}, res);
+    expect(res.status).toHaveBeenLastCalledWith(200);
+    mockClient.isReady.mockReturnValue(false);
+    route({}, res);
+    expect(res.status).toHaveBeenLastCalledWith(503);
+    mockClient.isReady.mockReturnValue(true);
+    await bot.shutdown();
+    route({}, res);
+    expect(res.status).toHaveBeenLastCalledWith(503);
+  });
+
+  test('new guilds receive all commands and registration failures are isolated', async () => {
+    const guild = { id: 'new', commands: { set: jest.fn().mockResolvedValue() } };
+    const handler = handlerFor(mockClient.on, 'guildCreate');
+    await handler(guild);
+    expect(guild.commands.set.mock.calls[0][0]).toHaveLength(5);
+    guild.commands.set.mockRejectedValueOnce(new Error('denied'));
+    await expect(handler(guild)).resolves.toBeUndefined();
   });
 
   describe('registerSlashCommands', () => {
@@ -411,12 +510,12 @@ describe('AniListDiscordBot', () => {
       expect(process.exit).toHaveBeenCalledTimes(1);
     });
 
-    test('skips destroying a client that is not ready', async () => {
+    test('destroys a client that is not ready', async () => {
       mockClient.isReady.mockReturnValue(false);
 
       await handlerFor(process.on, 'SIGINT')('SIGINT');
 
-      expect(mockClient.destroy).not.toHaveBeenCalled();
+      expect(mockClient.destroy).toHaveBeenCalled();
       expect(process.exit).toHaveBeenCalledWith(0);
     });
 

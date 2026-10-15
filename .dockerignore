@@ -12,3 +12,5 @@ __tests__
 .github
 prometheus
 *.md
+
+.deployment

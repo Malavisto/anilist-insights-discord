@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -51,6 +55,9 @@ jobs:
         run: bun run test:e2e
 
   build:
+    outputs:
+      digest: ${{ steps.build-and-push.outputs.digest }}
+      image: ${{ steps.identity.outputs.image }}
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -63,6 +70,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Normalize image identity
+        id: identity
+        shell: bash
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       # Enable emulation so Buildx can build ARM images on the GitHub-hosted runner.
       # https://github.com/docker/setup-qemu-action
@@ -145,16 +157,24 @@ jobs:
       - name: Deploy using SSH
         id: deploy
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_IMAGE: ${{ needs.build.outputs.image }}@${{ needs.build.outputs.digest }}
         with:
+          envs: DEPLOY_SHA,DEPLOY_IMAGE
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -euo pipefail
             cd /opt/anilist-discord
-            sudo docker compose --project-directory /opt/anilist-discord down
-            git pull
-            sudo docker compose --project-directory /opt/anilist-discord pull
-            sudo docker compose --project-directory /opt/anilist-discord up -d
+            tracked_status=$(git status --porcelain --untracked-files=no)
+            test -z "$tracked_status"
+            git fetch origin "$DEPLOY_SHA"
+            rollout=$(mktemp)
+            trap 'rm -f "$rollout"' EXIT
+            git show "$DEPLOY_SHA:scripts/deploy.sh" > "$rollout"
+            bash "$rollout" deploy "$DEPLOY_SHA" "$DEPLOY_IMAGE"
       - name: Notify Discord - Success
         if: success()
         uses: sarisia/actions-status-discord@v1

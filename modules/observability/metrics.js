@@ -29,7 +29,7 @@ class MetricsService {
     this.apiRequestCounter = new client.Counter({
       name: 'anilist_api_requests_total',
       help: 'Total number of requests to AniList API',
-      labelNames: ['endpoint', 'status', 'username'],
+      labelNames: ['endpoint', 'status'],
     });
 
     this.cacheHitCounter = new client.Counter({
@@ -67,12 +67,11 @@ class MetricsService {
   }
 
   // Enhanced API request tracking
-  trackApiRequest(endpoint, status, username) {
+  trackApiRequest(endpoint, status) {
     try {
       this.apiRequestCounter.inc({
         endpoint,
         status,
-        username: hashLabelValue(username),
       });
     } catch (error) {
       logger.error('Error tracking API request metrics', { error });

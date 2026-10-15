@@ -1,0 +1,10 @@
+# sudo-rs compatible: exact helper commands, no regexes or wildcard arguments.
+# Administrator must install the reviewed helper root:root 0755 at this fixed path.
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker pull-image
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker image-revision
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker image-exists
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker current-image
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker current-project
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker health
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker compose-pull
+github ALL=(root) NOPASSWD: /usr/local/sbin/anilist-docker compose-up

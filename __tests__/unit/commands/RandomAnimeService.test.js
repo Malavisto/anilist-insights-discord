@@ -1,51 +1,35 @@
-const { isValidHttpUrl } = require('../../modules/shared/embedHelpers');
+const { isValidHttpUrl } = require('../../../modules/shared/embedHelpers');
 const axios = require('axios');
 const MockAdapter = require('axios-mock-adapter');
-const RandomMangaService = require('../../modules/commands/RandomMangaService');
-const { createMockInteraction } = require('../helpers/mockInteraction');
+const RandomAnimeService = require('../../../modules/commands/RandomAnimeService');
+const { createMockInteraction } = require('../../helpers/mockInteraction');
 
-jest.mock('../../modules/observability/logger', () => ({
+jest.mock('../../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   warn: jest.fn(),
 }));
 
-jest.mock('../../modules/observability/metrics', () => ({
+jest.mock('../../../modules/observability/metrics', () => ({
   trackApiRequest: jest.fn(),
   trackCacheHit: jest.fn(),
   trackError: jest.fn(),
   trackCommand: jest.fn(() => jest.fn()),
 }));
 
-describe('RandomMangaService', () => {
+describe('RandomAnimeService', () => {
   let service;
   let mockAdapter;
 
   beforeEach(() => {
-    service = new RandomMangaService();
+    service = new RandomAnimeService();
     mockAdapter = new MockAdapter(axios);
     jest.clearAllMocks();
   });
 
   afterEach(() => {
     mockAdapter.reset();
-  });
-
-  describe('commandDefinition', () => {
-    test('defines the mangarandom command wired through to the handler', () => {
-      const definition = RandomMangaService.commandDefinition;
-
-      expect(definition.builder.name).toBe('mangarandom');
-      expect(definition.builder.description).toBe("Get a random manga from a user's AniList");
-
-      const usernameOption = definition.builder.options[0];
-      expect(usernameOption.name).toBe('username');
-      expect(usernameOption.required).toBe(true);
-
-      expect(definition.methodName).toBe('handleRandomMangaCommand');
-      expect(definition.metricName).toBe('manga_random');
-    });
   });
 
   test('deduplicates custom-list IDs before caching and random selection', async () => {
@@ -63,19 +47,19 @@ describe('RandomMangaService', () => {
     mockAdapter.onPost().replyOnce(200, { data: { MediaList: null } });
     const random = jest.spyOn(Math, 'random').mockReturnValue(0.75);
     try {
-      await expect(service.fetchRandomManga('testuser')).rejects.toThrow('No');
-      expect(service.cache.get('manga_ids_testuser')).toEqual([1, 2]);
+      await expect(service.fetchRandomAnime('testuser')).rejects.toThrow('No');
+      expect(service.cache.get('anime_ids_testuser')).toEqual([1, 2]);
       expect(JSON.parse(mockAdapter.history.post[1].data).variables.id).toBe(2);
     } finally {
       random.mockRestore();
     }
   });
 
-  describe('fetchRandomManga', () => {
-    test('should return a random manga from user list', async () => {
+  describe('fetchRandomAnime', () => {
+    test('should return a random anime from user list', async () => {
       const username = 'testuser';
-      const mockMangaIds = [1, 5, 10, 15];
-      const mockMangaId = 5;
+      const mockAnimeIds = [1, 5, 10, 15];
+      const mockAnimeId = 5;
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -83,7 +67,7 @@ describe('RandomMangaService', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: mockMangaIds.map((id) => ({ media: { id } })),
+                entries: mockAnimeIds.map((id) => ({ media: { id } })),
               },
             ],
           },
@@ -94,19 +78,18 @@ describe('RandomMangaService', () => {
         data: {
           MediaList: {
             media: {
-              id: mockMangaId,
+              id: mockAnimeId,
               title: {
-                english: 'Test Manga',
-                romaji: 'テスト マンガ',
+                english: 'Test Anime',
+                romaji: 'テスト アニメ',
               },
-              chapters: 120,
-              volumes: 8,
-              format: 'MANGA',
+              episodes: 12,
+              format: 'TV',
               status: 'FINISHED',
               genres: ['Action', 'Adventure'],
-              description: 'A test manga',
+              description: 'A test anime',
               averageScore: 85,
-              startDate: { year: 2024 },
+              seasonYear: 2024,
               coverImage: {
                 large: 'https://example.com/cover.jpg',
                 extraLarge: 'https://example.com/cover_large.jpg',
@@ -118,18 +101,17 @@ describe('RandomMangaService', () => {
         },
       });
 
-      const result = await service.fetchRandomManga(username);
+      const result = await service.fetchRandomAnime(username);
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(mockMangaId);
+      expect(result.id).toBe(mockAnimeId);
       expect(result.title).toBeDefined();
-      expect(result.chapters).toBe(120);
-      expect(result.volumes).toBe(8);
+      expect(result.episodes).toBe(12);
     });
 
-    test('should use cached manga IDs on second call', async () => {
+    test('should use cached anime IDs on second call', async () => {
       const username = 'testuser';
-      const mockMangaIds = [1, 5, 10];
+      const mockAnimeIds = [1, 5, 10];
 
       // First call - populate cache
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -138,7 +120,7 @@ describe('RandomMangaService', () => {
           MediaListCollection: {
             lists: [
               {
-                entries: mockMangaIds.map((id) => ({ media: { id } })),
+                entries: mockAnimeIds.map((id) => ({ media: { id } })),
               },
             ],
           },
@@ -150,15 +132,14 @@ describe('RandomMangaService', () => {
           MediaList: {
             media: {
               id: 5,
-              title: { english: 'Test Manga', romaji: 'テスト' },
-              chapters: 120,
-              volumes: 8,
-              format: 'MANGA',
+              title: { english: 'Test Anime', romaji: 'テスト' },
+              episodes: 12,
+              format: 'TV',
               status: 'FINISHED',
               genres: [],
               description: '',
               averageScore: 80,
-              startDate: { year: 2024 },
+              seasonYear: 2024,
               coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
@@ -167,7 +148,7 @@ describe('RandomMangaService', () => {
         },
       });
 
-      await service.fetchRandomManga(username);
+      await service.fetchRandomAnime(username);
 
       // Second call should use cache
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -175,15 +156,14 @@ describe('RandomMangaService', () => {
           MediaList: {
             media: {
               id: 10,
-              title: { english: 'Test Manga 2', romaji: 'テスト2' },
-              chapters: 200,
-              volumes: 12,
-              format: 'MANGA',
+              title: { english: 'Test Anime 2', romaji: 'テスト2' },
+              episodes: 13,
+              format: 'TV',
               status: 'FINISHED',
               genres: [],
               description: '',
               averageScore: 75,
-              startDate: { year: 2024 },
+              seasonYear: 2024,
               coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
@@ -192,11 +172,11 @@ describe('RandomMangaService', () => {
         },
       });
 
-      const result = await service.fetchRandomManga(username);
+      const result = await service.fetchRandomAnime(username);
       expect(result).toBeDefined();
 
       // Cache hit should be tracked
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
       expect(metrics.trackCacheHit).toHaveBeenCalled();
     });
 
@@ -210,10 +190,10 @@ describe('RandomMangaService', () => {
         },
       });
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow('not found on AniList');
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow('not found on AniList');
     });
 
-    test('should throw error if user has no manga', async () => {
+    test('should throw error if user has no anime', async () => {
       const username = 'testuser';
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
@@ -225,12 +205,12 @@ describe('RandomMangaService', () => {
         },
       });
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow('No manga found');
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow('No anime found');
     });
 
     test('should track API requests', async () => {
       const username = 'testuser';
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').reply(200, {
         data: {
@@ -251,14 +231,13 @@ describe('RandomMangaService', () => {
             media: {
               id: 1,
               title: { english: 'Test', romaji: 'テスト' },
-              chapters: 10,
-              volumes: 2,
-              format: 'MANGA',
+              episodes: 12,
+              format: 'TV',
               status: 'FINISHED',
               genres: [],
               description: '',
               averageScore: 80,
-              startDate: { year: 2024 },
+              seasonYear: 2024,
               coverImage: { large: 'url', extraLarge: 'url' },
             },
             status: 'COMPLETED',
@@ -268,12 +247,12 @@ describe('RandomMangaService', () => {
       });
 
       try {
-        await service.fetchRandomManga(username);
+        await service.fetchRandomAnime(username);
       } catch (e) {
         // Ignore
       }
 
-      expect(metrics.trackApiRequest).toHaveBeenCalledWith('manga_random', 'started', username);
+      expect(metrics.trackApiRequest).toHaveBeenCalledWith('anime_random', 'started', username);
     });
   });
 
@@ -283,7 +262,7 @@ describe('RandomMangaService', () => {
 
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow();
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow();
     });
 
     test('should handle malformed API response', async () => {
@@ -293,12 +272,11 @@ describe('RandomMangaService', () => {
         data: undefined,
       });
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow();
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow();
     });
-
     test('counts both HTTP responses even when no MediaList is returned', async () => {
       const username = 'testuser';
-      const metrics = require('../../modules/observability/metrics');
+      const metrics = require('../../../modules/observability/metrics');
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, {
         data: {
@@ -312,7 +290,7 @@ describe('RandomMangaService', () => {
         data: { MediaList: null },
       });
 
-      await expect(service.fetchRandomManga(username)).rejects.toThrow('No manga data found');
+      await expect(service.fetchRandomAnime(username)).rejects.toThrow('No anime data found');
 
       const successCalls = metrics.trackApiRequest.mock.calls.filter(
         (call) => call[1] === 'success',
@@ -321,7 +299,7 @@ describe('RandomMangaService', () => {
     });
   });
 
-  describe('handleRandomMangaCommand', () => {
+  describe('handleRandomAnimeCommand', () => {
     const mockIdsResponse = {
       data: {
         User: { id: 1 },
@@ -331,20 +309,19 @@ describe('RandomMangaService', () => {
       },
     };
 
-    const mockMangaResponse = {
+    const mockAnimeResponse = {
       data: {
         MediaList: {
           media: {
             id: 5,
-            title: { english: 'Test Manga', romaji: 'テスト マンガ' },
-            chapters: 120,
-            volumes: 8,
-            format: 'MANGA',
+            title: { english: 'Test Anime', romaji: 'テスト アニメ' },
+            episodes: 12,
+            format: 'TV',
             status: 'FINISHED',
             genres: ['Action'],
-            description: 'A test manga',
+            description: 'A test anime',
             averageScore: 85,
-            startDate: { year: 2024 },
+            seasonYear: 2024,
             coverImage: {
               large: 'https://example.com/cover.jpg',
               extraLarge: 'https://example.com/cover_large.jpg',
@@ -356,27 +333,26 @@ describe('RandomMangaService', () => {
       },
     };
 
-    test('should defer then edit the reply with the manga embed on success', async () => {
-      const interaction = createMockInteraction({ commandName: 'mangarandom' });
+    test('should defer then edit the reply with the anime embed on success', async () => {
+      const interaction = createMockInteraction();
 
       mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, mockIdsResponse);
-      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, mockMangaResponse);
+      mockAdapter.onPost('https://graphql.anilist.co').replyOnce(200, mockAnimeResponse);
 
-      await service.handleRandomMangaCommand(interaction);
+      await service.handleRandomAnimeCommand(interaction);
 
       expect(interaction.deferReply).toHaveBeenCalledWith({ ephemeral: false });
       expect(interaction.editReply).toHaveBeenCalledTimes(1);
       const embed = interaction.editReply.mock.calls[0][0].embeds[0];
-      expect(embed.data.title).toBe('🌟 Test Manga');
+      expect(embed.data.title).toBe('🌟 Test Anime');
     });
 
     test('should ask for a username when the option is missing', async () => {
       const interaction = createMockInteraction({
-        commandName: 'mangarandom',
         options: { getString: jest.fn().mockReturnValue(undefined) },
       });
 
-      await service.handleRandomMangaCommand(interaction);
+      await service.handleRandomAnimeCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
         content: '❌ Please provide a valid AniList username.',
@@ -385,23 +361,22 @@ describe('RandomMangaService', () => {
     });
 
     test('should edit the reply with a friendly error when fetching fails', async () => {
-      const interaction = createMockInteraction({ commandName: 'mangarandom' });
+      const interaction = createMockInteraction();
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
-      await service.handleRandomMangaCommand(interaction);
+      await service.handleRandomAnimeCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledWith({
-        content: expect.stringContaining('❌ Error fetching manga for testuser'),
+        content: expect.stringContaining('❌ Error fetching anime for testuser'),
       });
     });
 
     test('should fall back to reply() when deferReply itself fails', async () => {
       const interaction = createMockInteraction({
-        commandName: 'mangarandom',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
       });
 
-      await service.handleRandomMangaCommand(interaction);
+      await service.handleRandomAnimeCommand(interaction);
 
       expect(interaction.reply).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -414,7 +389,6 @@ describe('RandomMangaService', () => {
 
     test('should fall back to editReply with the deferred visibility when the friendly error send fails', async () => {
       const interaction = createMockInteraction({
-        commandName: 'mangarandom',
         editReply: jest
           .fn()
           .mockRejectedValueOnce(new Error('cannot edit'))
@@ -422,7 +396,7 @@ describe('RandomMangaService', () => {
       });
       mockAdapter.onPost('https://graphql.anilist.co').networkError();
 
-      await service.handleRandomMangaCommand(interaction);
+      await service.handleRandomAnimeCommand(interaction);
 
       expect(interaction.editReply).toHaveBeenCalledTimes(2);
       expect(interaction.editReply).toHaveBeenLastCalledWith({
@@ -431,17 +405,16 @@ describe('RandomMangaService', () => {
     });
 
     test('logs and stays silent when every response path fails', async () => {
-      const metrics = require('../../modules/observability/metrics');
-      const logger = require('../../modules/observability/logger');
+      const metrics = require('../../../modules/observability/metrics');
+      const logger = require('../../../modules/observability/logger');
       const interaction = createMockInteraction({
-        commandName: 'mangarandom',
         deferReply: jest.fn().mockRejectedValue(new Error('Unknown interaction')),
         reply: jest.fn().mockRejectedValue(new Error('cannot reply')),
       });
 
-      await expect(service.handleRandomMangaCommand(interaction)).resolves.toBe(false);
+      await expect(service.handleRandomAnimeCommand(interaction)).resolves.toBe(false);
 
-      expect(metrics.trackError).toHaveBeenCalledWith('Error', 'manga_random');
+      expect(metrics.trackError).toHaveBeenCalledWith('Error', 'anime_random');
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to send final error message',
         expect.any(Object),
@@ -449,25 +422,24 @@ describe('RandomMangaService', () => {
     });
   });
 
-  describe('createMangaEmbed', () => {
-    const baseManga = {
+  describe('createAnimeEmbed', () => {
+    const baseAnime = {
       id: 5,
-      title: 'Test Manga',
-      chapters: 120,
-      volumes: 8,
-      format: 'MANGA',
-      status: 'COMPLETED',
+      title: 'Test Anime',
+      episodes: 12,
+      format: 'TV',
+      status: 'FINISHED',
       genres: ['Action', 'Adventure'],
       year: 2024,
-      description: 'A test manga',
+      description: 'A test anime',
       userScore: 9,
       averageScore: 85,
       coverImage: 'https://example.com/cover_large.jpg',
     };
 
     test('should strip HTML tags and collapse whitespace in descriptions', () => {
-      const embed = service.createMangaEmbed({
-        ...baseManga,
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
         description: '<p>Hello world</p>\n\n  second part',
       });
 
@@ -475,8 +447,8 @@ describe('RandomMangaService', () => {
     });
 
     test('should truncate descriptions over 200 characters with an ellipsis', () => {
-      const embed = service.createMangaEmbed({
-        ...baseManga,
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
         description: 'a'.repeat(300),
       });
 
@@ -484,21 +456,21 @@ describe('RandomMangaService', () => {
     });
 
     test('should use a default description when none is provided', () => {
-      const embed = service.createMangaEmbed({ ...baseManga, description: '' });
+      const embed = service.createAnimeEmbed({ ...baseAnime, description: '' });
 
       expect(embed.data.description).toBe('📝 No description available');
     });
 
     test('should map known status and format values to emojis', () => {
-      const embed = service.createMangaEmbed(baseManga);
+      const embed = service.createAnimeEmbed(baseAnime);
 
-      expect(embed.data.fields.find((f) => f.name === '📡 Status').value).toBe('✅ COMPLETED');
-      expect(embed.data.fields.find((f) => f.name === '🎭 Format').value).toBe('📖 MANGA');
+      expect(embed.data.fields.find((f) => f.name === '📡 Status').value).toBe('✅ FINISHED');
+      expect(embed.data.fields.find((f) => f.name === '🎭 Format').value).toBe('📺 TV');
     });
 
     test('should use fallback emojis for unknown status and format', () => {
-      const embed = service.createMangaEmbed({
-        ...baseManga,
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
         status: 'HIATUS',
         format: 'UNKNOWN',
       });
@@ -507,66 +479,51 @@ describe('RandomMangaService', () => {
       expect(embed.data.fields.find((f) => f.name === '🎭 Format').value).toBe('🎴 UNKNOWN');
     });
 
-    test('should map manga-specific format emojis', () => {
-      const novel = service.createMangaEmbed({ ...baseManga, format: 'NOVEL' });
+    test('should build title, link and color from the anime', () => {
+      const embed = service.createAnimeEmbed(baseAnime);
 
-      expect(novel.data.fields.find((f) => f.name === '🎭 Format').value).toBe('📓 NOVEL');
-    });
-
-    test('should build title, link and color from the manga', () => {
-      const embed = service.createMangaEmbed(baseManga);
-
-      expect(embed.data.title).toBe('🌟 Test Manga');
-      expect(embed.data.url).toBe('https://anilist.co/manga/5');
+      expect(embed.data.title).toBe('🌟 Test Anime');
+      expect(embed.data.url).toBe('https://anilist.co/anime/5');
       expect(embed.data.color).toBe(0x0099ff);
     });
 
     test('should render genre hashtags and the empty-list fallback', () => {
-      const embed = service.createMangaEmbed(baseManga);
+      const embed = service.createAnimeEmbed(baseAnime);
       expect(embed.data.fields.find((f) => f.name === '🏷️ Genres').value).toBe(
         '#Action #Adventure',
       );
 
-      const emptyGenres = service.createMangaEmbed({ ...baseManga, genres: [] });
+      const emptyGenres = service.createAnimeEmbed({ ...baseAnime, genres: [] });
       expect(emptyGenres.data.fields.find((f) => f.name === '🏷️ Genres').value).toBe('No genres');
     });
 
-    test('should show chapters and volumes with fallbacks for missing values', () => {
-      const embed = service.createMangaEmbed(baseManga);
-
-      expect(embed.data.fields.find((f) => f.name === '📖 Chapters').value).toBe('🔢 120');
-      expect(embed.data.fields.find((f) => f.name === '📚 Volumes').value).toBe('🔢 8');
-    });
-
-    test('should use fallbacks for missing chapters, volumes, year, scores and zero averageScore', () => {
-      const embed = service.createMangaEmbed({
-        ...baseManga,
-        chapters: 'Unknown',
-        volumes: 'Unknown',
+    test('should use fallbacks for missing episodes, year, scores and zero averageScore', () => {
+      const embed = service.createAnimeEmbed({
+        ...baseAnime,
+        episodes: 'Unknown',
         year: null,
         userScore: null,
         averageScore: 0,
       });
 
-      expect(embed.data.fields.find((f) => f.name === '📖 Chapters').value).toBe('🔢 Unknown');
-      expect(embed.data.fields.find((f) => f.name === '📚 Volumes').value).toBe('🔢 Unknown');
+      expect(embed.data.fields.find((f) => f.name === '🎞️ Episodes').value).toBe('🔢 Unknown');
       expect(embed.data.fields.find((f) => f.name === '📅 Year').value).toBe('🗓️ Unknown');
       expect(embed.data.fields.find((f) => f.name === '⭐ Your Score').value).toBe('📊 Not rated');
       expect(embed.data.fields.find((f) => f.name === '📈 Average Score').value).toBe('🌈 N/A%');
     });
 
     test('should set the cover image for a valid https URL', () => {
-      const embed = service.createMangaEmbed(baseManga);
+      const embed = service.createAnimeEmbed(baseAnime);
 
       expect(embed.data.image.url).toBe('https://example.com/cover_large.jpg');
     });
 
     test('should omit the image for non-http URLs', () => {
-      const ftp = service.createMangaEmbed({
-        ...baseManga,
+      const ftp = service.createAnimeEmbed({
+        ...baseAnime,
         coverImage: 'ftp://example.com/cover.jpg',
       });
-      const garbage = service.createMangaEmbed({ ...baseManga, coverImage: 'not-a-url' });
+      const garbage = service.createAnimeEmbed({ ...baseAnime, coverImage: 'not-a-url' });
 
       expect(ftp.data.image).toBeUndefined();
       expect(garbage.data.image).toBeUndefined();

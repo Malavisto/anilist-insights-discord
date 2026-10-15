@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-jest.mock('../../modules/observability/logger', () => ({
+jest.mock('../../../modules/observability/logger', () => ({
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
@@ -8,7 +8,7 @@ jest.mock('../../modules/observability/logger', () => ({
 }));
 
 // @prometheus-io/client's global registry is per test file (jest isolates module
-// registries), so other files' jest.mock('../../modules/observability/metrics') are unaffected.
+// registries), so other files' jest.mock('../../../modules/observability/metrics') are unaffected.
 const client = require('@prometheus-io/client');
 
 // Must run BEFORE requiring metrics.js: @prometheus-io/client 15's
@@ -16,7 +16,7 @@ const client = require('@prometheus-io/client');
 // cannot stop, which would leave the worker with open handles. No-op it.
 jest.spyOn(client, 'collectDefaultMetrics').mockImplementation(() => {});
 
-const metricsService = require('../../modules/observability/metrics');
+const metricsService = require('../../../modules/observability/metrics');
 
 const sha256Prefix = (value) =>
   crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
@@ -91,43 +91,18 @@ describe('MetricsService', () => {
   });
 
   describe('trackApiRequest privacy contract', () => {
-    test('stores only the first 12 hex chars of the sha256 of the username', async () => {
-      metricsService.trackApiRequest('anime_random', 'started', 'testuser');
-
+    test('many usernames share endpoint and status series', async () => {
+      for (let i = 0; i < 100; i++) {
+        metricsService.trackApiRequest('recommendation', 'started', `user${i}`);
+        metricsService.trackApiRequest('recommendation', 'success', `user${i}`);
+      }
       const values = await getValues('anilist_api_requests_total');
-      const entry = findValue(values, {
-        endpoint: 'anime_random',
-        status: 'started',
-        username: sha256Prefix('testuser'),
-      });
-
-      expect(entry).toBeDefined();
-      expect(entry.value).toBe(1);
-    });
-
-    test('never exposes the raw username in labels or exposition text', async () => {
-      metricsService.trackApiRequest('anime_random', 'started', 'testuser');
-
-      const values = await getValues('anilist_api_requests_total');
-      const rawHits = values.filter((v) => Object.values(v.labels).includes('testuser'));
-      expect(rawHits).toHaveLength(0);
-
-      const exposition = await metricsService.getMetrics();
-      expect(exposition).not.toContain('testuser');
-      expect(exposition).toContain(sha256Prefix('testuser'));
-    });
-
-    test('uses "unknown" for falsy usernames', async () => {
-      metricsService.trackApiRequest('anime_random', 'failure', undefined);
-
-      const values = await getValues('anilist_api_requests_total');
-      const entry = findValue(values, {
-        endpoint: 'anime_random',
-        status: 'failure',
-        username: 'unknown',
-      });
-
-      expect(entry).toBeDefined();
+      expect(values).toHaveLength(2);
+      expect(values.map((v) => v.labels)).toEqual([
+        { endpoint: 'recommendation', status: 'started' },
+        { endpoint: 'recommendation', status: 'success' },
+      ]);
+      expect(values.map((v) => v.value)).toEqual([100, 100]);
     });
 
     test('swallows counter errors', () => {

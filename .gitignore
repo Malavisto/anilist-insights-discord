@@ -139,3 +139,7 @@ compose.override.yml
 
 # AI Agents
 .codex/config.toml
+# Host deployment state and immutable Compose override
+.deployment/
+# Personal Docs
+docs

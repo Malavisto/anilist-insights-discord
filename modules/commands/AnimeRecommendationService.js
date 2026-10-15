@@ -30,6 +30,8 @@ class AnimeRecommendationService {
   }
 
   async fetchAnimeRecommendation(username) {
+    let deadlineTimer;
+    let operation;
     try {
       // Cache the candidate pool, selecting again for each command.
       const cachedPool = this.cache.get(`recommendation_${username}`);
@@ -39,6 +41,9 @@ class AnimeRecommendationService {
         return this.selectRecommendation(cachedPool);
       }
 
+      operation = new AbortController();
+      const deadline = Date.now() + 30000;
+      deadlineTimer = setTimeout(() => operation.abort(), 30000);
       const query = `
             query ($username: String) {
                 MediaListCollection(userName: $username, type: ANIME) {
@@ -62,11 +67,23 @@ class AnimeRecommendationService {
             `;
 
       // Fetch user's media list
-      const response = await anilistRequest(query, { username }, 'recommendation', username);
+      const response = await anilistRequest(
+        query,
+        { username },
+        'recommendation',
+        username,
+        operation.signal,
+      );
 
       // Get user's anime list and find highest-rated anime
       const lists = response.data.data.MediaListCollection.lists;
-      const allEntries = lists.flatMap((list) => list.entries);
+      const entriesById = new Map();
+      for (const entry of lists.flatMap((list) => list.entries)) {
+        const id = String(Number(entry.mediaId ?? entry.media.id));
+        if (!entriesById.has(id) || entry.score > entriesById.get(id).score)
+          entriesById.set(id, entry);
+      }
+      const allEntries = [...entriesById.values()];
 
       // Sort entries by score, get highest-rated anime
       const highestRatedEntries = allEntries
@@ -87,7 +104,7 @@ class AnimeRecommendationService {
       // Second query to find recommendations based on genres
       const recommendationQuery = `
             query ($genres: [String], $page: Int) {
-                Page(page: $page, perPage: 5) {
+                Page(page: $page, perPage: 25) {
                     pageInfo {
                         hasNextPage
                     }
@@ -117,20 +134,34 @@ class AnimeRecommendationService {
             }
             `;
 
-      const listedIds = new Set(allEntries.map((entry) => entry.media.id));
+      const listedIds = new Set(entriesById.keys());
       const uniqueRecommendations = new Map();
       let page = 1;
+      const seenPages = new Set();
       // Collect up to five unseen titles, continuing when a page has too few.
-      while (uniqueRecommendations.size < 5) {
-        const recommendationResponse = await anilistRequest(
-          recommendationQuery,
-          { genres: genresOfInterest, page },
-          'recommendation',
-          username,
-        );
+      while (uniqueRecommendations.size < 5 && page <= 10 && Date.now() < deadline) {
+        let recommendationResponse;
+        try {
+          recommendationResponse = await anilistRequest(
+            recommendationQuery,
+            { genres: genresOfInterest, page },
+            'recommendation',
+            username,
+            operation.signal,
+          );
+        } catch (error) {
+          if (operation.signal.aborted) break;
+          throw error;
+        }
         const result = recommendationResponse.data.data.Page;
+        const signature = JSON.stringify(
+          result.media.map((anime) => String(Number(anime.id))).sort(),
+        );
+        if (!result.media.length || seenPages.has(signature)) break;
+        seenPages.add(signature);
         for (const anime of result.media) {
-          if (!listedIds.has(anime.id)) uniqueRecommendations.set(anime.id, anime);
+          if (!listedIds.has(String(Number(anime.id))))
+            uniqueRecommendations.set(String(Number(anime.id)), anime);
           if (uniqueRecommendations.size === 5) break;
         }
         if (uniqueRecommendations.size === 5 || !result.pageInfo?.hasNextPage) break;
@@ -138,7 +169,7 @@ class AnimeRecommendationService {
       }
 
       if (uniqueRecommendations.size === 0) {
-        throw new Error('No unique recommendations found');
+        throw new Error('No unique recommendations found within bounded search');
       }
 
       const candidates = [...uniqueRecommendations.values()].map((anime) => ({
@@ -158,14 +189,19 @@ class AnimeRecommendationService {
       this.cache.set(`recommendation_${username}`, pool);
       return this.selectRecommendation(pool);
     } catch (error) {
+      const failure = operation?.signal.aborted
+        ? new Error('No unique recommendations found within bounded search')
+        : error;
       metricsService.trackError('recommendation_failure', 'anime_recommend');
 
       logger.error('Anime recommendation fetch failed', {
         username,
-        errorMessage: error.message,
-        errorStack: error.stack,
+        errorMessage: failure.message,
+        errorStack: failure.stack,
       });
-      throw error;
+      throw failure;
+    } finally {
+      clearTimeout(deadlineTimer);
     }
   }
 

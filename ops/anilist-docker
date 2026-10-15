@@ -1,0 +1,48 @@
+#!/bin/bash -p
+# Administrator-owned helper: install as root:root 0755 at /usr/local/sbin/anilist-docker.
+# Never execute a helper from the deployment user's writable checkout through sudo.
+set -euo pipefail
+export LC_ALL=C
+fail() { echo "$*" >&2; exit 2; }
+[[ $# == 1 ]] || fail 'Exactly one operation is required'
+
+read_value() {
+  local extra
+  IFS= read -r value || fail 'One newline-terminated input value is required'
+  if IFS= read -r extra || [[ -n "$extra" ]]; then fail 'Extra input is not allowed'; fi
+}
+valid_image() {
+  [[ "$value" =~ ^ghcr[.]io/malavisto/anilist-insights-discord@sha256:[a-f0-9]{64}$ ]]
+}
+valid_id() { [[ "$value" =~ ^sha256:[a-f0-9]{64}$ ]]; }
+
+case "$1" in
+  pull-image)
+    read_value
+    valid_image || fail 'Expected an immutable bot image digest'
+    args=(pull "$value")
+    ;;
+  image-revision)
+    read_value
+    valid_image || valid_id || fail 'Expected a bot image digest or local image ID'
+    args=(image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$value")
+    ;;
+  image-exists)
+    read_value
+    valid_id || fail 'Expected a local SHA-256 image ID'
+    args=(image inspect "$value")
+    ;;
+  current-image) args=(inspect --format '{{.Image}}' anilist-discord-bot);;
+  current-project) args=(inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' anilist-discord-bot);;
+  health) args=(inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' anilist-discord-bot);;
+  compose-pull|compose-up)
+    read_value
+    [[ "$value" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || fail 'Invalid Compose project name'
+    args=(compose --project-directory /opt/anilist-discord -p "$value" -f /opt/anilist-discord/compose.yml -f /opt/anilist-discord/.deployment/compose.yml)
+    if [[ "$1" == compose-pull ]]; then args+=(pull); else args+=(up -d --pull never); fi
+    ;;
+  *) fail 'Unsupported operation';;
+esac
+
+# Do not inherit caller Docker/Compose endpoints, config, credentials, or plugin paths.
+exec /usr/bin/env -i HOME=/root PATH=/usr/sbin:/usr/bin:/sbin:/bin /usr/bin/docker "${args[@]}"
