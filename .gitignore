@@ -142,4 +142,4 @@ compose.override.yml
 # Host deployment state and immutable Compose override
 .deployment/
 # Personal Docs
-docs/
+docs
