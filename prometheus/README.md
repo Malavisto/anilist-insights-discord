@@ -32,3 +32,9 @@ By following the steps above, you can set up Prometheus to monitor your applicat
 ## Metric semantics
 
 API request metrics count each HTTP request, including both queries for random selections and uncached recommendations. `started` counts attempts; `success` and `failure` record HTTP/GraphQL outcomes. Empty results can still be command failures after a successful request. Cache hits use `anilist_bot_cache_hits` separately. The dashboard cache ratio compares cache hits with executions of the four cache-enabled commands.
+
+## API counter label migration
+
+`anilist_api_requests_total` now has only `endpoint` and `status` labels. Removing the hashed `username` label bounds series by endpoint/outcome instead of user count. Attempt, success, and failure accounting is unchanged. The checked-in dashboard aggregates by endpoint/status and needs no query change. Historical username-labelled series remain until Prometheus retention expires; aggregate across them during the transition and remove username filters/groupings in external consumers. External dashboards have not been audited live.
+
+The separate `anilist_user_stats` gauge retains its 12-character SHA-256 username labels. It currently has no production caller; any future use should consider bounded retention as separate work. `/readyz` checks Discord connection readiness while `/metrics` continues to export metrics regardless of that state.
