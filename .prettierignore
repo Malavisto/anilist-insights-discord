@@ -1,4 +1,6 @@
 coverage/
 logs/
+.agents/
+.claude/
 bun.lock
 pnpm-lock.yaml
