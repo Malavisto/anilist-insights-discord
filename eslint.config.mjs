@@ -4,7 +4,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['coverage/', 'logs/'],
+    ignores: ['coverage/', 'logs/', '.agents/', '.claude/'],
   },
   js.configs.recommended,
   {
