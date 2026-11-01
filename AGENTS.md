@@ -19,7 +19,7 @@ bun run test -- CacheService.test.js -t "test name"   # single case
 bun bot:start|stop|status|attach      # tmux session `anilist-bot`; stop sends SIGINT for graceful shutdown
 ```
 
-Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-mock-adapter`. ESLint (flat config in `eslint.config.mjs`) and Prettier are wired up via the `lint` / `lint:fix` / `format` / `format:check` scripts, and CI's lint job is blocking.
+Tests need no `.env` or real tokens — all AniList HTTP is mocked with `axios-mock-adapter`. ESLint (flat config in `eslint.config.mjs`) and Prettier are wired up via the `lint` / `lint:fix` / `format` / `format:check` scripts. CI's lint job (including formatting) is advisory and does not block the pipeline.
 
 ## Architecture
 

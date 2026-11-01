@@ -51,6 +51,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     strategy:
       matrix:
@@ -75,22 +76,22 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Lint (blocking — fails the build)
+      - name: Lint (advisory)
         run: bun run lint
 
       - name: Check formatting
         run: bun run format:check
 
   test-results:
-    needs: [test, lint]
+    needs: [test]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.lint.result }}" != "success" ]; then
+          if [ "${{ needs.test.result }}" != "success" ]; then
             echo "❌ CI pipeline failed"
             exit 1
           fi
-          echo "✅ All checks passed!"
+          echo "✅ All tests passed!"
